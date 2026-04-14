@@ -1,6 +1,6 @@
 {
   "name": "pitch-shift",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "type": "module",
   "types": "index.d.ts",
   "description": "Canonical pitch-shifting algorithms: phase vocoder, peak-locked, transient-aware, PSOLA, WSOLA, granular, PaulStretch, SMS, HPSS, formant, sampler, hybrid",
