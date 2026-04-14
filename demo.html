@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>pitch-shift</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600&family=Chivo+Mono:wght@400;500&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#e9ebe7;--paper:#f6f7f3;--fg:#1f221f;--muted:#6e756d;
+  --line:#c4c9bf;--line-soft:#d8ddd4;--accent:#ca6b63;--ok:#6f8c6a;
+  --dim:#9aa196;--bad:#bf655d;--sans:'Archivo',system-ui,sans-serif;--mono:'Chivo Mono',monospace;
+}
+
+body{
+  font:400 14px/1.45 var(--sans);
+  color:var(--fg);
+  background:linear-gradient(180deg,var(--paper),var(--bg));
+  min-height:100vh;
+  padding:44px 44px 60px;
+  margin:0;
+}
+h1{font:500 clamp(20px,2.5vw,26px)/1 var(--sans);letter-spacing:0.16em;text-transform:uppercase;margin-bottom:8px}
+.subtitle{font:400 11px/1.4 var(--mono);color:var(--muted);margin-bottom:30px;letter-spacing:0.03em}
+
+/* source selector */
+.source-bar{display:flex;align-items:center;gap:10px;margin-bottom:28px;flex-wrap:wrap}
+.source-bar label{font:600 10px/1 var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:0.18em}
+.source-btn{
+  font:400 12px/1 var(--sans);padding:7px 15px;border:1px solid var(--line);border-radius:0;
+  background:var(--paper);color:var(--fg);cursor:pointer;transition:all .12s ease;letter-spacing:0.02em;
+}
+.source-btn:hover{border-color:var(--fg);background:color-mix(in oklch,var(--paper) 92%,var(--fg) 8%)}
+.source-btn.active{border-color:var(--fg);background:var(--fg);color:var(--paper)}
+.source-btn:disabled{opacity:.3;cursor:default}
+
+.tool-bar{display:flex;align-items:center;gap:10px;margin:-8px 0 18px;flex-wrap:wrap}
+.tool-bar label{font:600 10px/1 var(--sans);color:var(--muted);text-transform:uppercase;letter-spacing:0.18em}
+.wave-btn{
+  font:400 11px/1 var(--sans);padding:6px 12px;border:1px solid var(--line);border-radius:999px;
+  background:transparent;color:var(--muted);cursor:pointer;transition:all .12s ease;
+}
+.wave-btn.active{border-color:var(--fg);color:var(--fg);background:color-mix(in oklch,var(--paper) 92%,var(--fg) 8%)}
+
+.benchbar{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 18px;
+}
+.bench-card{
+  border:1px solid var(--line);background:color-mix(in oklch,var(--paper) 96%,var(--bg) 4%);
+  padding:10px 12px 11px;min-height:58px;
+}
+.bench-card label{
+  display:block;font:600 9px/1 var(--sans);text-transform:uppercase;letter-spacing:0.18em;color:var(--muted);margin-bottom:8px;
+}
+.bench-card strong{display:block;font:500 15px/1 var(--sans);color:var(--fg)}
+.bench-card span{display:block;font:400 10px/1.4 var(--mono);color:var(--dim);margin-top:5px}
+.bench-legend{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.bench-legend span{display:inline-flex;align-items:center;gap:6px;font:400 10px/1 var(--mono);color:var(--muted)}
+.bench-legend i{width:7px;height:7px;border-radius:50%;display:inline-block;background:var(--line)}
+.bench-legend .fast i{background:var(--ok)}
+.bench-legend .mid i{background:var(--dim)}
+.bench-legend .slow i{background:var(--bad)}
+
+/* status */
+#status{font:400 11px/1 var(--mono);color:var(--muted);margin-left:auto;white-space:nowrap}
+#status.busy{color:var(--ok)}
+
+/* grid */
+.grid{
+  display:grid;
+  grid-template-columns:minmax(105px,150px) repeat(3,1fr);
+  gap:0;
+  border:1px solid var(--fg);
+  background:var(--paper);
+  box-shadow:0 1px 0 color-mix(in oklch,var(--fg) 10%,transparent);
+}
+.grid-hdr{
+  font:600 9px/1 var(--sans);text-transform:uppercase;letter-spacing:0.18em;
+  padding:12px 12px 11px;border-bottom:1px solid var(--line);color:var(--muted);
+}
+.grid-hdr:first-child{border-right:1px solid var(--line)}
+.algo-label{
+  font:500 12px/1 var(--sans);padding:13px 12px;
+  border-bottom:1px solid var(--line-soft);border-right:1px solid var(--line);
+  display:flex;align-items:center;gap:6px;
+}
+.algo-label .tag{font:400 8px/1 var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:0.07em;white-space:nowrap}
+
+.cell{
+  padding:8px 10px;border-bottom:1px solid var(--line-soft);
+  display:flex;align-items:center;gap:8px;min-height:52px;position:relative;
+}
+.cell audio{width:0;height:0;position:absolute}
+.play-btn{
+  width:22px;height:22px;border-radius:50%;border:1px solid var(--line);
+  background:var(--paper);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .12s ease;flex-shrink:0;z-index:1;
+}
+.play-btn:hover{border-color:var(--fg);background:color-mix(in oklch,var(--paper) 94%,var(--fg) 6%)}
+.play-btn.playing{border-color:var(--accent);background:var(--accent)}
+.play-btn svg{width:8px;height:8px;fill:var(--fg)}
+.play-btn.playing svg{fill:var(--paper)}
+
+.metric{
+  font:400 10px/1 var(--mono);color:var(--dim);white-space:nowrap;z-index:1;flex-shrink:0;
+  display:inline-flex;align-items:center;gap:6px;padding:0 0 0 1px;
+}
+.metric::before{
+  content:'';width:7px;height:7px;border-radius:50%;display:inline-block;
+  background:var(--line);box-shadow:inset 0 0 0 1px color-mix(in oklch,var(--fg) 8%,transparent);
+}
+.metric b{color:var(--muted);font-weight:500}
+.metric.fast{color:var(--ok)}
+.metric.fast b{color:var(--ok)}
+.metric.fast::before{background:var(--ok)}
+.metric.slow{color:var(--bad)}
+.metric.slow b{color:var(--bad)}
+.metric.slow::before{background:var(--bad)}
+
+.wave-canvas{flex:1 1 0;min-width:0;height:30px;width:100%;--wave-color:var(--dim)}
+
+.cell.empty{color:var(--muted);font:400 10px/1 var(--mono);font-style:normal;letter-spacing:0.02em}
+
+/* original row */
+.orig-row{background:color-mix(in oklch,var(--ok) 4%,transparent)}
+.orig-row .algo-label{color:var(--accent);font-weight:500}
+.orig-row .wave-canvas{--wave-color:var(--accent)}
+
+/* ground-truth row — canonical shifted reference */
+.ground-row{background:color-mix(in oklch,var(--ok) 6%,transparent)}
+.ground-row .algo-label{color:var(--ok);font-weight:500}
+.ground-row .wave-canvas{--wave-color:var(--ok)}
+
+/* skeleton */
+.cell.loading{position:relative;overflow:hidden}
+.cell.loading::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent 30%,color-mix(in oklch,var(--fg) 4%,transparent) 50%,transparent 70%);
+  animation:shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+
+/* footer */
+.footer{margin-top:22px;font:400 10px/1.8 var(--mono);color:var(--dim);letter-spacing:0.01em}
+.footer a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line)}
+.footer a:hover{color:var(--fg);border-color:var(--fg)}
+
+/* github link */
+.github-link{
+  position:fixed;top:20px;right:20px;
+  opacity:0.7;transition:opacity .2s ease;z-index:1000;
+}
+.github-link:hover{opacity:1}
+.github-link svg{width:28px;height:28px;fill:var(--fg)}
+
+@media(max-width:700px){
+  body{padding:22px 16px 34px}
+  .benchbar{grid-template-columns:1fr 1fr}
+  .grid{grid-template-columns:minmax(80px,110px) repeat(3,1fr)}
+  .algo-label .tag{display:none}
+}
+</style>
+</head>
+<body>
+
+<a href="https://github.com/audiojs/pitch-shift" class="github-link" target="_blank" rel="noopener">
+  <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+</a>
+
+<h1>pitch-shift</h1>
+<p class="subtitle">Canonical pitch-shifting algorithms — 13 implementations, live in-browser, same input across algorithms and shifts</p>
+
+<div class="source-bar">
+  <label>Source</label>
+  <button class="source-btn active" data-src="tone">Tone 440 Hz</button>
+  <button class="source-btn" data-src="chord">Chord</button>
+  <button class="source-btn" data-src="vowel">Vowel</button>
+  <button class="source-btn" data-src="pluck">Pluck</button>
+  <button class="source-btn" data-src="arpeggio">Arpeggio</button>
+  <button class="source-btn" data-src="beat">Rock beat</button>
+  <button class="source-btn" data-src="chirp">Chirp</button>
+  <button class="source-btn" data-src="voice">Voice (Lena)</button>
+  <span id="status"></span>
+</div>
+
+<div class="tool-bar">
+  <label>Waveform</label>
+  <button class="wave-btn active" data-wave="raw">Raw</button>
+  <button class="wave-btn" data-wave="envelope">Envelope</button>
+</div>
+
+<div class="benchbar" id="benchbar"></div>
+
+<div class="grid" id="grid"></div>
+
+<div class="footer">
+  Processed in-browser with Web Audio API.
+  Each cell = <code>fn(samples, {semitones})</code>, timed with <code>performance.now()</code>.
+  <br>Fixtures from <a href="./scripts/fixtures.js">scripts/fixtures.js</a> — the same canonical signals
+  that <code>npm run quality</code> measures. Voice sample: <a href="https://github.com/nicholasgasior/audio-lena">audio-lena</a>.
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "fourier-transform": "./node_modules/fourier-transform/index.js",
+    "window-function": "./node_modules/window-function/index.js",
+    "pitch-shift": "./index.js"
+  }
+}
+</script>
+<script type="module">
+import pitchShift, {
+  ola, vocoder, phaseLock, transient, psola, wsola, formant, granular,
+  paulstretch, sms, hpss, sample, hybrid,
+} from 'pitch-shift'
+import {
+  sine, sineChord, vowel, karplusStrong, arpeggio, rockBeat, chirp,
+} from './scripts/fixtures.js'
+
+const SR = 44100
+const SEMITONES = [-5, 0, 5]
+let waveMode = 'raw'
+const ALGOS = [
+  { name: 'pitchShift', fn: pitchShift, tag: 'auto' },
+
+  { name: 'ola',         fn: ola,         tag: 'time' },
+  { name: 'granular',    fn: granular,    tag: 'time' },
+  { name: 'wsola',       fn: wsola,       tag: 'time' },
+  { name: 'sample',      fn: sample,      tag: 'sampler' },
+
+  { name: 'vocoder',     fn: vocoder,     tag: 'spectral' },
+  { name: 'phaseLock',   fn: phaseLock,   tag: 'spectral' },
+  { name: 'transient',   fn: transient,   tag: 'spectral' },
+  { name: 'paulstretch', fn: paulstretch, tag: 'spectral' },
+  { name: 'hpss',        fn: hpss,        tag: 'separation' },
+
+  { name: 'psola',       fn: psola,       tag: 'pitch-sync', needsSR: true },
+  { name: 'formant',     fn: formant,     tag: 'formant' },
+  { name: 'sms',         fn: sms,         tag: 'sinusoidal' },
+  { name: 'hybrid',      fn: hybrid,      tag: 'hybrid' },
+]
+
+function fmtSemi(st) { return `${st > 0 ? '+' : ''}${st} st` }
+
+// Envelope a fixture with short cosine fades to avoid edge pops on A/B playback.
+function fade(data, ms = 8) {
+  let n = data.length
+  let f = Math.min(Math.floor(SR * ms / 1000), n >> 2)
+  for (let i = 0; i < f; i++) {
+    let g = 0.5 - 0.5 * Math.cos(Math.PI * i / f)
+    data[i] *= g
+    data[n - 1 - i] *= g
+  }
+  return data
+}
+
+// ── canonical fixtures from scripts/fixtures.js ──────────────────────
+// Single source of truth shared with npm run quality — A/B plays the exact signals the
+// quality rig measures, so the listener hears what the numbers in the README describe.
+// Each fixture has a `build(ratio)` that produces a canonically shifted version: e.g. for
+// `ratio = 2^(+5/12)` the tone fixture builds `sine(440·r)`. That gives the listener an
+// exact ground-truth reference to A/B against the algorithm outputs — the "ideal shift".
+// Fixtures without a closed-form ground truth (rock beat, real voice) set `hasRef:false`.
+const VOWEL_FORMANTS = [
+  { freq: 700,  bw: 90 },
+  { freq: 1220, bw: 100 },
+  { freq: 2600, bw: 120 },
+]
+const FIXTURES = {
+  tone:     { hasRef: true,  build: (r) => fade(sine(440 * r, 2, SR)) },
+  chord:    { hasRef: true,  build: (r) => fade(sineChord(220 * r, 2, SR, [1, 1.25, 1.5])) },
+  vowel:    { hasRef: true,  build: (r) => fade(vowel(180 * r, VOWEL_FORMANTS, 2, SR)) },
+  pluck:    { hasRef: true,  build: (r) => fade(karplusStrong(220 * r, 2, SR)) },
+  arpeggio: { hasRef: true,  build: (r) => arpeggio([60, 64, 67, 72].map(n => n + 12 * Math.log2(r)), 0.5, SR) },
+  beat:     { hasRef: false, build: ()  => rockBeat(2, SR, 120) },
+  chirp:    { hasRef: true,  build: (r) => fade(chirp(100 * r, 4000 * r, 2, SR)) },
+}
+
+function semiToRatio(st) { return Math.pow(2, st / 12) }
+
+async function loadLena() {
+  let resp = await fetch('./node_modules/audio-lena/lena.mp3')
+  let buf = await resp.arrayBuffer()
+  let ctx = new OfflineAudioContext(1, SR * 13, SR)
+  let abuf = await ctx.decodeAudioData(buf)
+  // take ~2 seconds of speech
+  let full = abuf.getChannelData(0)
+  let start = Math.floor(SR * 1.5), len = Math.floor(SR * 2)
+  let d = new Float32Array(len)
+  d.set(full.subarray(start, start + len))
+  let fade = 400
+  for (let i = 0; i < fade; i++) { let g = i / fade; d[i] *= g; d[len - 1 - i] *= g }
+  return d
+}
+
+// ── audio playback ────────────────────────
+let actx = null, playing = null
+
+function ensureCtx() {
+  if (!actx) actx = new AudioContext({ sampleRate: SR })
+  return actx
+}
+
+function play(samples, btn) {
+  let ctx = ensureCtx()
+  // stop current
+  if (playing) { playing.src.stop(); playing.btn.classList.remove('playing'); if (playing.btn === btn) { playing = null; return } }
+  let buf = ctx.createBuffer(1, samples.length, SR)
+  buf.getChannelData(0).set(samples)
+  let src = ctx.createBufferSource()
+  src.buffer = buf
+  src.connect(ctx.destination)
+  src.start()
+  btn.classList.add('playing')
+  playing = { src, btn }
+  src.onended = () => { btn.classList.remove('playing'); if (playing?.src === src) playing = null }
+}
+
+// ── process + measure ─────────────────────
+function process(algo, samples, semitones) {
+  let opts = { semitones, ...(algo.needsSR ? { sampleRate: SR } : {}) }
+  let t0 = performance.now()
+  let out = algo.fn(samples, opts)
+  return { out, ms: performance.now() - t0 }
+}
+
+// Draw centered per-pixel min/max waveform for predictable rendering across sources.
+function drawWave(canvas, samples, color) {
+  let dpr = window.devicePixelRatio || 1
+  let w = canvas.clientWidth, h = canvas.clientHeight
+  canvas.width = w * dpr; canvas.height = h * dpr
+  let ctx = canvas.getContext('2d')
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx.clearRect(0, 0, w, h)
+
+  let mid = h / 2
+  let peak = 1e-6
+  for (let i = 0; i < samples.length; i++) peak = Math.max(peak, Math.abs(samples[i]))
+  let scale = (h * 0.42) / peak
+  let step = samples.length / Math.max(1, w)
+  let raw = waveMode === 'raw'
+
+  ctx.strokeStyle = color || getComputedStyle(canvas).getPropertyValue('--wave-color')?.trim() || '#9a9488'
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  for (let x = 0; x < w; x++) {
+    let i0 = Math.floor(x * step)
+    let i1 = Math.max(i0 + 1, Math.floor((x + 1) * step))
+    let min = 1, max = -1, absMax = 0
+    for (let i = i0; i < i1 && i < samples.length; i++) {
+      let s = samples[i]
+      if (s < min) min = s
+      if (s > max) max = s
+      let a = Math.abs(s)
+      if (a > absMax) absMax = a
+    }
+    let lo = raw ? min : -absMax
+    let hi = raw ? max : absMax
+    ctx.moveTo(x + 0.5, mid + lo * scale)
+    ctx.lineTo(x + 0.5, mid + hi * scale)
+  }
+  ctx.stroke()
+
+  let lineColor = getComputedStyle(document.documentElement).getPropertyValue('--line')?.trim() || '#bdb7aa'
+  ctx.strokeStyle = lineColor
+  ctx.beginPath()
+  ctx.moveTo(0, mid + 0.5)
+  ctx.lineTo(w, mid + 0.5)
+  ctx.stroke()
+}
+
+// ── build grid ────────────────────────────
+const grid = document.getElementById('grid')
+const benchbar = document.getElementById('benchbar')
+const status = document.getElementById('status')
+
+function playSvg() { return '<svg viewBox="0 0 12 12"><polygon points="2,0 12,6 2,12"/></svg>' }
+
+function buildGrid() {
+  grid.innerHTML = ''
+  // header
+  grid.innerHTML += '<div class="grid-hdr">Algorithm</div>'
+  for (let f of SEMITONES) grid.innerHTML += `<div class="grid-hdr">${fmtSemi(f)}</div>`
+  // original row
+  grid.innerHTML += `<div class="algo-label orig-row">original</div>`
+  for (let [fi, f] of SEMITONES.entries()) grid.innerHTML += `<div class="cell orig-row" id="orig-${fi}"></div>`
+  // ground-truth row (canonical shifted reference)
+  grid.innerHTML += `<div class="algo-label ground-row">ground truth <span class="tag">reference</span></div>`
+  for (let [fi] of SEMITONES.entries()) grid.innerHTML += `<div class="cell ground-row" id="ground-${fi}"></div>`
+  // algo rows
+  for (let a of ALGOS) {
+    grid.innerHTML += `<div class="algo-label">${a.name} <span class="tag">${a.tag}</span></div>`
+    for (let [fi] of SEMITONES.entries()) {
+      grid.innerHTML += `<div class="cell" id="${a.name}-${fi}"></div>`
+    }
+  }
+}
+
+function redrawWaves() {
+  document.querySelectorAll('.wave-canvas').forEach((canvas) => {
+    if (!canvas._samples) return
+    drawWave(canvas, canvas._samples, canvas._waveColor)
+  })
+}
+
+function updateBench(samples, runs = []) {
+  let dur = `${(samples.length / SR).toFixed(2)}s source`
+  let totalMs = runs.reduce((sum, run) => sum + run.ms, 0)
+
+  benchbar.innerHTML = [
+    `<div class="bench-card"><label>Total</label><strong>${(totalMs / 1000).toFixed(2)}s</strong><span>${runs.length} renders for current source</span></div>`,
+  ].join('')
+}
+
+function cellContent(samples, ms, label) {
+  let div = document.createElement('div')
+  div.style.cssText = 'display:flex;align-items:center;gap:8px;width:100%'
+  let btn = document.createElement('button')
+  btn.className = 'play-btn'
+  btn.innerHTML = playSvg()
+  btn.onclick = () => play(samples, btn)
+  let cv = document.createElement('canvas')
+  cv.className = 'wave-canvas'
+  cv._samples = samples
+  cv._waveColor = ''
+  let met = document.createElement('span')
+  met.className = 'metric'
+  let summary = `${ms.toFixed(0)}ms`
+  met.innerHTML = label ? `<b>${label}</b> · ${summary}` : `<b>${summary}</b>`
+  div.appendChild(btn)
+  div.appendChild(cv)
+  div.appendChild(met)
+  // draw after layout
+  requestAnimationFrame(() => drawWave(cv, samples))
+  return div
+}
+
+function origContent(samples) {
+  let div = document.createElement('div')
+  div.style.cssText = 'display:flex;align-items:center;gap:8px;width:100%'
+  let btn = document.createElement('button')
+  btn.className = 'play-btn'
+  btn.innerHTML = playSvg()
+  btn.onclick = () => play(samples, btn)
+  let cv = document.createElement('canvas')
+  cv.className = 'wave-canvas'
+  let accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()
+  cv._samples = samples
+  cv._waveColor = accent
+  let met = document.createElement('span')
+  met.className = 'metric'
+  met.innerHTML = `${(samples.length / SR).toFixed(2)}s`
+  div.appendChild(btn)
+  div.appendChild(cv)
+  div.appendChild(met)
+  requestAnimationFrame(() => drawWave(cv, samples, accent))
+  return div
+}
+
+// ── run all ───────────────────────────────
+async function runSource(srcKey) {
+  status.textContent = srcKey === 'voice' ? 'Loading audio…' : 'Generating…'
+  status.className = 'busy'
+  buildGrid()
+
+  // mark all cells loading
+  for (let a of ALGOS) for (let [fi] of SEMITONES.entries()) {
+    document.getElementById(`${a.name}-${fi}`).classList.add('loading')
+  }
+
+  await new Promise(r => setTimeout(r, 30))
+
+  let samples
+  let fixture = FIXTURES[srcKey]
+  if (srcKey === 'voice') samples = await loadLena()
+  else samples = fixture.build(1)
+  let runs = []
+  updateBench(samples, runs)
+
+  // fill original row
+  for (let [fi] of SEMITONES.entries()) {
+    let cell = document.getElementById(`orig-${fi}`)
+    cell.innerHTML = ''
+    cell.appendChild(origContent(samples))
+  }
+
+  // fill ground-truth row with canonically shifted references when the fixture can
+  // produce them. The semi=0 column is the original; -5/+5 are freshly built from the
+  // same synth primitive at the shifted frequency, so the listener hears the ideal
+  // target without any algorithm in the signal path.
+  for (let [fi, semi] of SEMITONES.entries()) {
+    let cell = document.getElementById(`ground-${fi}`)
+    cell.innerHTML = ''
+    if (fixture && fixture.hasRef) {
+      let ref = semi === 0 ? samples : fixture.build(semiToRatio(semi))
+      cell.appendChild(origContent(ref))
+    } else {
+      cell.innerHTML = '<span class="metric"><b>no ground truth</b></span>'
+    }
+  }
+
+  let total = 0, count = 0
+  for (let a of ALGOS) {
+    for (let [fi, f] of SEMITONES.entries()) {
+      let cell = document.getElementById(`${a.name}-${fi}`)
+      cell.classList.remove('loading')
+
+      status.textContent = `${a.name} ${fmtSemi(f)}…`
+      await new Promise(r => setTimeout(r, 5))
+
+      try {
+        let { out, ms } = process(a, samples, f)
+        cell.innerHTML = ''
+        cell.appendChild(cellContent(out, ms, fmtSemi(f)))
+        runs.push({ name: a.name, label: fmtSemi(f), ms })
+        total += ms; count++
+        updateBench(samples, runs)
+      } catch (e) {
+        cell.innerHTML = `<span class="metric slow">${e.message}</span>`
+      }
+    }
+  }
+
+  status.textContent = `${count} runs · ${(total / 1000).toFixed(1)}s total`
+  status.className = ''
+}
+
+// ── source buttons ────────────────────────
+document.querySelectorAll('.source-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+    // stop playing
+    if (playing) { playing.src.stop(); playing.btn.classList.remove('playing'); playing = null }
+    runSource(btn.dataset.src)
+  }
+})
+
+document.querySelectorAll('.wave-btn').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.wave-btn').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+    waveMode = btn.dataset.wave
+    redrawWaves()
+  }
+})
+
+buildGrid()
+updateBench(FIXTURES.tone.build(1), [])
+runSource('tone')
+</script>
+</body>
+</html>

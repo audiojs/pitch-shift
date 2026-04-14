@@ -1,0 +1,81 @@
+{
+  "name": "pitch-shift",
+  "version": "1.0.0",
+  "type": "module",
+  "types": "index.d.ts",
+  "description": "Canonical pitch-shifting algorithms: phase vocoder, peak-locked, transient-aware, PSOLA, WSOLA, granular, PaulStretch, SMS, HPSS, formant, sampler, hybrid",
+  "sideEffects": false,
+  "exports": {
+    ".": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "util.js",
+    "stft.js",
+    "ola.js",
+    "vocoder.js",
+    "phase-lock.js",
+    "transient.js",
+    "psola.js",
+    "wsola.js",
+    "granular.js",
+    "paulstretch.js",
+    "sms.js",
+    "hpss.js",
+    "sample.js",
+    "hybrid.js",
+    "formant-shift.js",
+    "pitch-shift.js",
+    "stretch.js"
+  ],
+  "scripts": {
+    "test": "node test.js",
+    "quality": "node scripts/quality.js",
+    "quality:ci": "node scripts/quality.js --ci",
+    "bench": "node scripts/bench.js",
+    "prepublishOnly": "node test.js && node scripts/quality.js --ci"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/audiojs/pitch-shift.git"
+  },
+  "keywords": [
+    "pitch-shift",
+    "pitch-shifting",
+    "phase-vocoder",
+    "peak-locked",
+    "transient",
+    "psola",
+    "wsola",
+    "formant",
+    "granular",
+    "paulstretch",
+    "sms",
+    "sinusoidal",
+    "hpss",
+    "sampler",
+    "hybrid",
+    "variable-pitch",
+    "audio",
+    "dsp",
+    "signal-processing"
+  ],
+  "author": "Dmitry Iv. <dfcreative@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/audiojs/pitch-shift/issues"
+  },
+  "homepage": "https://github.com/audiojs/pitch-shift#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "fourier-transform": "^2.0.0",
+    "window-function": "^3.0.0"
+  },
+  "devDependencies": {
+    "audio-lena": "^3.0.0",
+    "tst": "^9.4.0"
+  }
+}
