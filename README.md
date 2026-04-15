@@ -268,6 +268,5 @@ let tail = write()  // flush
 - [time-stretch](https://github.com/audiojs/time-stretch) — Time stretching
 - [audio-filter](https://github.com/audiojs/audio-filter) — Audio filters
 
-## License
 
-MIT
+<p align="center"><a href="./license.md">MIT</a> · <a href="https://github.com/krishnized/license">ॐ</a></p>

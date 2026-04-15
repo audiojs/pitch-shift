@@ -9,6 +9,7 @@
     ".": "./index.js"
   },
   "files": [
+    "license.md",
     "index.js",
     "index.d.ts",
     "util.js",
