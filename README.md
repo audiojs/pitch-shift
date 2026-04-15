@@ -84,20 +84,20 @@ Each algorithm is measured across ten canonical properties on synthetic fixtures
 
 | Algorithm | f0 err | THD% | alias | stream corr | cent err | onset err | attack corr | formant dist | phase coh | shift |
 |-----------|-------:|-----:|------:|------------:|---------:|----------:|------------:|-------------:|----------:|------:|
-| `pitchShift` (auto) | 0.00 | 0.0 | 0.000 | 1.000 | 0.028 | 0.000 | 0.985 | 1.714 | 0.941 | 1.597 |
-| `vocoder` | 0.00 | 0.0 | 0.003 | 1.000 | 0.010 | 0.000 | 0.943 | 2.119 | 0.959 | 1.868 |
-| `phaseLock` | 0.00 | 0.0 | 0.000 | 1.000 | 0.028 | 0.000 | 0.986 | 1.714 | **0.993** | 1.617 |
-| `transient` | 0.00 | 0.0 | 0.000 | 1.000 | 0.028 | 0.000 | 0.985 | 1.714 | 0.941 | 1.597 |
-| `sms` | 1.67 | 0.2 | 0.051 | 1.000 | 0.131 | 0.000 | 0.995 | 1.056 | 0.915 | **1.491** |
-| `hpss` | 0.00 | 0.0 | 0.052 | 1.000 | 0.013 | 0.000 | 0.985 | 1.938 | 0.959 | 1.746 |
-| `hybrid` | 0.00 | 0.0 | 0.000 | 1.000 | 0.019 | 0.000 | 0.986 | 3.583 | 0.741 | 1.817 |
-| `formant` | 0.00 | 0.0 | 0.029 | 1.000 | 0.066 | 0.000 | 0.946 | 1.027 | 0.941 | **1.456** |
-| `paulstretch` | 1.67 | 0.3 | 0.002 | — | 0.046 | 0.000 | 0.975 | 1.184 | — | 1.654 |
-| `psola` | 203.33† | 0.3 | 1.000 | — | 0.224† | 0.000 | 0.994 | **0.869** | — | 1.920 |
-| `wsola` | 15.00 | 0.9 | 0.533 | 0.300 | 0.032 | 0.000 | 0.995 | 4.013 | 0.942 | 2.088 |
-| `granular` | 48.01 | 0.3 | 0.593 | 0.996 | 0.138 | 0.871 | 0.996 | 4.003 | 1.000 | 2.360 |
-| `ola` | 48.01 | 0.3 | 1.153 | 0.885 | 0.126 | 0.582 | 0.998 | 5.272 | 1.000 | 2.617 |
-| `sample` | 0.22 | 0.1 | 1.000 | 1.000 | 0.005 | 0.000 | 0.950 | 2.952 | — | 1.771 |
+| `pitchShift` (auto) | 0.00 | 0.0 | 0.000 | 1.000 | 0.012 | 0.000 | 0.985 | 1.600 | 0.993 | 1.795 |
+| `phaseLock` | 0.00 | 0.0 | 0.000 | 1.000 | 0.012 | 0.000 | 0.986 | 1.591 | 0.993 | 1.796 |
+| `transient` | 0.00 | 0.0 | 0.000 | 1.000 | 0.012 | 0.000 | 0.985 | 1.600 | 0.993 | 1.795 |
+| `vocoder` | 0.00 | 0.0 | 0.000 | 1.000 | 0.006 | 0.000 | 0.983 | 1.343 | 0.922 | **1.491** |
+| `hpss` | 0.00 | 0.0 | 0.052 | 1.000 | 0.012 | 0.000 | 0.983 | 1.234 | 0.922 | 1.492 |
+| `formant` | 0.00 | 0.0 | 0.000 | 1.000 | 0.061 | 0.000 | 0.984 | **0.955** | 0.978 | 1.605 |
+| `sms` | 0.00 | 0.0 | 0.002 | 1.000 | 0.001 | 0.000 | 0.953 | 2.028 | 0.922 | 1.761 |
+| `sample` | 1.00 | 0.2 | 0.006 | 1.000 | 0.002 | 0.000 | 0.995 | 2.366 | 0.869 | 1.671 |
+| `paulstretch` | 0.00 | 0.6 | 0.258 | — | 0.001 | 0.000 | 0.941 | 7.273 | 0.778 | 2.314 |
+| `hybrid` | 0.00 | 0.0 | 0.000 | 1.000 | 0.001 | 0.000 | 0.986 | 2.981 | 0.710 | 1.871 |
+| `psola` | 0.66 | 0.2 | 0.005 | 1.000 | 0.003 | 0.000 | 0.941 | 2.340 | **0.998** | 1.768 |
+| `wsola` | 1.00 | 0.2 | 0.005 | 1.000 | 0.003 | 0.000 | 0.995 | 2.372 | 0.869 | 1.665 |
+| `granular` | 1.09 | 0.1 | 0.005 | 1.000 | 0.008 | 0.000 | 0.995 | 3.438 | 0.978 | 1.891 |
+| `ola` | 0.29 | 0.1 | 0.005 | 1.000 | 0.042 | 0.000 | 0.992 | 2.498 | 0.971 | 1.780 |
 
 Columns:
 
@@ -112,7 +112,7 @@ Columns:
 - **phase coh** — AM-envelope coherence on a 5 Hz tremolo. Goertzel-extracted modulation depth, `min(out, in) / max(out, in)`. 1.0 means the slow envelope survives the shift intact. Marked — for `paulstretch` (random phase is non-deterministic), `psola` (TD-PSOLA has no frame-level phase model), and `sample` (time-compresses, so the modulation rate itself shifts).
 - **shift** (log-mag) — direct log-magnitude spectral distance between the algorithm output and the canonical shifted reference, averaged over four harmonic ground-truth fixtures: `sine(660)`, `sineChord(330, [1,1.25,1.5])`, `karplusStrong(330)`, and `amSine(660)`. Gain- and phase-invariant. Bold = leader. The single best "how close to the ideal pitch shift" number.
 
-Notes. Time-domain methods (`ola`, `granular`, `wsola`, `sample`) have no anti-alias lowpass on the stride-`ratio` read — keep shift ratios moderate or prefer STFT methods for ratios >1.5. `psola`, `formant`, and `sms` dominate formant preservation by construction. `transient` dominates transient preservation on drum material even though `attack corr` on a plucked string is close across algorithms. † Canonical TD-PSOLA cannot shift pure sinusoids: identical glottal-impulse-shaped grains OLA'd at spacing `p/ratio` produce interference at the original fundamental rather than a shifted sine; PSOLA's "pitch" comes from the re-stacked glottal-impulse train exciting a preserved formant filter, which a bare sine lacks. PSOLA's strength is on voiced material — see its leading `formant dist` and `shift` columns on `karplusStrong`/`vowel` fixtures. See `scripts/fixtures.js` and `scripts/metrics.js` for the full rig.
+Notes. `formant`, `hpss`, and `sms` dominate formant preservation by construction. `transient` dominates transient preservation on drum material even though `attack corr` on a plucked string is close across algorithms. `paulstretch` stream-vs-batch is marked — because random phase synthesis decorrelates by design. See `scripts/fixtures.js` and `scripts/metrics.js` for the full rig.
 
 ### Options
 

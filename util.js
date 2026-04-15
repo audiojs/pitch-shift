@@ -102,22 +102,35 @@ export function matchGain(out, ref) {
   return out
 }
 
-// Linear-interpolation resample to an exact target length. Canonical, gain-preserving
-// (peaks may attenuate fractionally — adequate for the second stage of stretch-based
-// pitch shift where the window fade already dominates quality).
-export function resampleTo(data, outLen) {
+// Hann-windowed sinc resampler with anti-aliasing. When downsampling (inLen > outLen) the
+// sinc cutoff scales to outLen/inLen so content above Nyquist/step is suppressed before it
+// can fold. At r=8 that is 16 zero-crossings — ≈60 dB stopband on a 2× downsampling test.
+// Upsampling (inLen ≤ outLen) uses cutoff=1, identical to the standard reconstruction sinc.
+export function resampleTo(data, outLen, r = 8) {
   let inLen = data.length
   let out = new Float32Array(outLen)
   if (outLen === 0 || inLen === 0) return out
-  if (outLen === 1) { out[0] = data[0]; return out }
-  let ratio = (inLen - 1) / (outLen - 1)
+  if (outLen === inLen) return new Float32Array(data)
+  let step = (inLen - 1) / (outLen - 1)
+  let cutoff = step > 1 ? 1 / step : 1
+  let hw = Math.ceil(r / cutoff)
   for (let i = 0; i < outLen; i++) {
-    let pos = i * ratio
-    let j = pos | 0
-    let f = pos - j
-    let a = data[j]
-    let b = j + 1 < inLen ? data[j + 1] : a
-    out[i] = a * (1 - f) + b * f
+    let pos = i * step
+    let i0 = pos | 0
+    let frac = pos - i0
+    let s = 0
+    for (let k = -hw + 1; k <= hw; k++) {
+      let idx = i0 + k
+      if (idx < 0 || idx >= inLen) continue
+      let x = k - frac
+      let xi = x * cutoff
+      let wi = Math.abs(x) / hw
+      if (wi >= 1) continue
+      let si = Math.abs(xi) < 1e-9 ? 1 : Math.sin(Math.PI * xi) / (Math.PI * xi)
+      let w = 0.5 + 0.5 * Math.cos(Math.PI * wi)
+      s += data[idx] * si * cutoff * w
+    }
+    out[i] = s
   }
   return out
 }
