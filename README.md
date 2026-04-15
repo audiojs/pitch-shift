@@ -239,6 +239,30 @@ npm run bench
 - [fourier-transform](https://github.com/audiojs/fourier-transform) — FFT
 - [window-function](https://github.com/audiojs/window-function) — Hann windowing
 
+## Migration from `pitch-shift` v0.0.0
+
+The package name was previously held by [mikolalysenko/pitch-shift](https://github.com/mikolalysenko/pitch-shift) (2013, frozen at v0.0.0). That package implements a single time-domain algorithm: per-frame Hann windowing → `detect-pitch` autocorrelation period → `scalePitch` linear interpolation → `findMatch` splice-point similarity search → overlap-add. This is the canonical WSOLA/TD-PSOLA pattern.
+
+The same algorithm is available here as [`wsola`](#algorithms) (with per-grain cross-correlation search) or [`psola`](#algorithms) (with autocorrelation pitch marks). Both are native implementations without external pitch-detection dependencies and support batch, streaming, and multi-channel.
+
+The old callback API:
+
+```js
+// v0.0.0 (old)
+var shifter = require('pitch-shift')(onData, t => ratio, { frameSize: 2048 })
+shifter.feed(float32Array)
+```
+
+New equivalent:
+
+```js
+// v1 (this package)
+import { wsola } from 'pitch-shift'
+let write = wsola({ ratio })
+let out = write(float32Array)
+let tail = write()  // flush
+```
+
 ## Related
 
 - [time-stretch](https://github.com/audiojs/time-stretch) — Time stretching
