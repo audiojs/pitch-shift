@@ -23,15 +23,10 @@ function makeProcess(ratio) {
     newMag.fill(0)
     newFreq.fill(0)
 
-    // Peak-gated scatter. Canonical Bernsee scatters every source bin; but on chord material
-    // the bins BETWEEN partials ("chimeras") have phase derivatives reporting non-stationary
-    // intermediate frequencies — when scattered they produce an audible frame-rate soft click
-    // on sustained chords. Fix: only scatter bins that are a local magnitude peak or an
-    // immediate neighbour (±1). That's the set of bins whose phase derivative is reliably
-    // reporting a real partial's true frequency; chimera bins between peaks are simply not
-    // emitted. A ±1 neighbourhood (not ±2) preserves closely-spaced chord partials whose
-    // mainlobes butt against each other — e.g. 275 and 330 Hz sit at bins 13 and 15 with
-    // bin 14 between them; ±1 gates bin 14 out; ±2 would incorrectly swallow bin 15 itself.
+    // Peak-gated scatter. Only bins at or adjacent (±1) to a local magnitude peak are
+    // eligible — chimera bins between partials have unreliable phase derivatives that
+    // produce frame-rate clicks on chords. ±1 neighbourhood preserves closely-spaced
+    // partials (e.g. 275/330 Hz at bins 13/15 — bin 14 is gated out, ±2 would swallow 15).
     let maxM = 0
     for (let k = 0; k <= half; k++) if (mag[k] > maxM) maxM = mag[k]
     let floor = Math.max(1e-8, maxM * 0.005)
@@ -46,7 +41,6 @@ function makeProcess(ratio) {
       }
       prev[k] = phase[k]
 
-      // Peak-neighbour test: bin k emits only if k, k-1, or k+1 is a local peak above floor.
       let isEligible = false
       for (let d = -1; d <= 1; d++) {
         let j = k + d

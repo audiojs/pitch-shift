@@ -27,8 +27,7 @@
     "sample.js",
     "hybrid.js",
     "formant-shift.js",
-    "pitch-shift.js",
-    "stretch.js"
+    "pitch-shift.js"
   ],
   "scripts": {
     "test": "node test.js",
@@ -73,6 +72,7 @@
   },
   "dependencies": {
     "fourier-transform": "^2.0.0",
+    "time-stretch": "^1.2.0",
     "window-function": "^3.0.0"
   },
   "devDependencies": {

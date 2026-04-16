@@ -73,10 +73,10 @@ function makeProcess(ratio, envelopeWidth) {
     // the chord beat frequency (e.g. 55 Hz for a 220/275 Hz pair). That 55 Hz beat aliases
     // against the 86 Hz frame rate into ~31 Hz flutter on the correction factor — audible
     // as a soft click on raised chord material. An EMA of log(mag) with α=0.4 (τ ≈ 13 ms
-    // at hop=512 / 44.1 kHz) stabilises the envelope: it converges within 5τ ≈ 65 ms
+    // at hop=512 / 44.1 kHz) stabilises the envelope: it converges within 3τ ≈ 50 ms
     // (before the 20%-skip activeRegion window opens) and attenuates the 55 Hz oscillation
-    // by ≈2×, bringing it below the flicker perception threshold.
-    let alpha = 0.4
+    // by ≈3×, bringing it below the flicker perception threshold.
+    let alpha = 0.6
     for (let k = 0; k <= half; k++) {
       let lm = Math.log(Math.max(1e-8, mag[k]))
       logMagAvg[k] = state.first ? lm : alpha * logMagAvg[k] + (1 - alpha) * lm

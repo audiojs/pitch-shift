@@ -102,6 +102,31 @@ export function matchGain(out, ref) {
   return out
 }
 
+// Hann-windowed sinc read at a fractional source position. `cutoff ∈ (0,1]` sets an
+// anti-alias lowpass at `cutoff × Nyquist`; use `cutoff = min(1, 1/stride)` when the
+// caller is stepping through the source faster than one sample per read to suppress
+// content above the new Nyquist before it folds. `r` is the kernel half-width in
+// zero-crossings (8 is standard, giving ≈60 dB stopband on a 2× decimation).
+export function sincRead(buf, pos, r, cutoff) {
+  let bufLen = buf.length
+  let i0 = Math.floor(pos)
+  let frac = pos - i0
+  let hw = Math.ceil(r / cutoff)
+  let s = 0
+  for (let k = -hw + 1; k <= hw; k++) {
+    let idx = i0 + k
+    if (idx < 0 || idx >= bufLen) continue
+    let x = k - frac
+    let xi = x * cutoff
+    let wi = Math.abs(x) / hw
+    if (wi >= 1) continue
+    let si = Math.abs(xi) < 1e-9 ? 1 : Math.sin(Math.PI * xi) / (Math.PI * xi)
+    let w = 0.5 + 0.5 * Math.cos(Math.PI * wi)
+    s += buf[idx] * si * cutoff * w
+  }
+  return s
+}
+
 // Hann-windowed sinc resampler with anti-aliasing. When downsampling (inLen > outLen) the
 // sinc cutoff scales to outLen/inLen so content above Nyquist/step is suppressed before it
 // can fold. At r=8 that is 16 zero-crossings — ≈60 dB stopband on a 2× downsampling test.

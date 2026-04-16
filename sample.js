@@ -1,35 +1,18 @@
-import { bufferedStream, makePitchShift, resolveRatio } from './util.js'
-import { wsolaStretch } from './stretch.js'
+import { bufferedStream, makePitchShift, resolveRatio, sincRead } from './util.js'
 
-// Sample-based pitch shift with a sinc playback interpolator. Duration is preserved
-// the classical way: first time-stretch the source (WSOLA) by `ratio` so content fills
-// the equivalent intended duration, then a Hann-windowed sinc interpolator "plays back"
-// the stretched buffer at rate `ratio` to land on exactly `data.length` output samples.
-// Identical in spirit to a hardware sampler with a rubber band under the tape: higher
-// pitch = faster tape = stretched source compensates so total duration stays the same.
-
-// cutoff ∈ (0,1]: anti-alias lowpass at cutoff × Nyquist. hw = ceil(r/cutoff) widens the
-// kernel to maintain the same number of zero-crossings when cutoff < 1.
-function sincInterp(buf, relPos, r, cutoff) {
-  let bufLen = buf.length
-  let i0 = Math.floor(relPos)
-  let frac = relPos - i0
-  let hw = Math.ceil(r / cutoff)
-  let s = 0
-  for (let k = -hw + 1; k <= hw; k++) {
-    let idx = i0 + k
-    if (idx < 0 || idx >= bufLen) continue
-    let x = k - frac
-    let xi = x * cutoff
-    let wi = Math.abs(x) / hw
-    if (wi >= 1) continue
-    let si = Math.abs(xi) < 1e-9 ? 1 : Math.sin(Math.PI * xi) / (Math.PI * xi)
-    let w = 0.5 + 0.5 * Math.cos(Math.PI * wi)
-    s += buf[idx] * si * cutoff * w
-  }
-  return s
-}
-
+// Canonical sampler pitch shift. A Hann-windowed sinc interpolator reads the source at
+// a fractional stride of `ratio` per output sample — the same intuition as a hardware
+// sampler playing a one-shot at a different rate, or a tracker module running the same
+// waveform faster. There is no time preservation: output duration is `input_length /
+// ratio`. The tail is zero-padded so the unified batch API (`output.length === input
+// .length`) still holds, but the active region is genuinely shorter on pitch-up.
+//
+// Pitch preservation is exact (fractional-stride sinc over a clean buffer is an ideal
+// resampler), at the cost of losing time — the one thing every other algorithm in this
+// package keeps. Use it when that is the intended effect: instrument one-shots, sampler
+// voices, tracker playback, anything where "higher pitch = shorter clip" is the point.
+// Anti-aliasing is inherited from the shared `sincRead`: `cutoff = min(1, 1/ratio)`
+// suppresses content above the new Nyquist before it folds.
 function sampleBatch(data, opts) {
   let { ratio, ratioFn } = resolveRatio(opts)
   if (ratio === 1 && !ratioFn) return new Float32Array(data)
@@ -37,28 +20,13 @@ function sampleBatch(data, opts) {
   let sr = opts?.sampleRate || 44100
   let n = data.length
   let out = new Float32Array(n)
-  // Time-stretch source by ratio so we have enough content to feed a rate-ratio playback
-  // for the full output length. For constant ratio this gives stretchedLen ≈ n*ratio and
-  // readPos = i*ratio lands inside the stretched buffer for every i.
-  let stretchFactor = ratioFn ? null : ratio
-  let stretched = stretchFactor
-    ? wsolaStretch(data, stretchFactor, { frameSize: opts?.frameSize ?? 2048, hopSize: opts?.hopSize })
-    : data
-  // When stepping faster than 1 sample per output (ratio > 1), apply anti-alias lowpass
-  // at 1/ratio so content above Nyquist/ratio is suppressed before it folds.
-  let cutoff = ratio > 1 ? 1 / ratio : 1
-  let hw = Math.ceil(r / cutoff)
   let readPos = 0
   for (let i = 0; i < n; i++) {
     let rNow = ratioFn ? ratioFn(i / sr) : ratio
-    let cNow = ratioFn ? (rNow > 1 ? 1 / rNow : 1) : cutoff
-    let hwNow = ratioFn ? Math.ceil(r / cNow) : hw
-    out[i] = sincInterp(stretched, readPos, r, cNow)
+    let cutoff = rNow > 1 ? 1 / rNow : 1
+    if (readPos >= n) break
+    out[i] = sincRead(data, readPos, r, cutoff)
     readPos += rNow
-    if (readPos + hwNow >= stretched.length) {
-      for (let j = i + 1; j < n; j++) out[j] = 0
-      break
-    }
   }
   return out
 }

@@ -1,20 +1,20 @@
+import { psola as stretch } from 'time-stretch'
 import { bufferedStream, makePitchShift, resampleTo, resolvePitchParams } from './util.js'
-import { psolaStretch } from './stretch.js'
 
-// Pitch-Synchronous Overlap-Add pitch shift. Canonical two-stage form: PSOLA time-stretch
-// by `ratio` (pitch-mark-driven grain placement keeps cycles coherent), then linear
-// resample back to the original length. The stretcher falls back to WSOLA on unvoiced
-// or weakly-voiced material, so complex / polyphonic input still produces clean output
-// instead of the buzzing you get from naive single-pass TD-PSOLA.
-
+// Canonical Pitch-Synchronous Overlap-Add pitch shift (Moulines-Charpentier 1990).
+// PSOLA time-stretch at `factor = ratio` — autocorrelation period contour → pitch marks
+// → two-period Hann grains placed at pitch-synchronous intervals, preserving the
+// vocal-tract filter (formants) by construction — followed by anti-aliased sinc resample
+// back to original length. Designed for monophonic voiced material; polyphonic input
+// violates the single-pitch assumption.
 function psolaBatch(data, opts) {
   let { ratio } = resolvePitchParams(opts)
-  let stretched = psolaStretch(data, ratio, {
-    sampleRate: opts?.sampleRate,
+  let sr = opts?.sampleRate || 44100
+  let stretched = stretch(data, {
+    factor: ratio,
+    sampleRate: sr,
     minFreq: opts?.minFreq,
     maxFreq: opts?.maxFreq,
-    frameSize: opts?.frameSize,
-    hopSize: opts?.hopSize,
   })
   return resampleTo(stretched, data.length)
 }

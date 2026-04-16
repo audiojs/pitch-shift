@@ -206,6 +206,7 @@ h1{font:500 clamp(20px,2.5vw,26px)/1 var(--sans);letter-spacing:0.16em;text-tran
   "imports": {
     "fourier-transform": "./node_modules/fourier-transform/index.js",
     "window-function": "./node_modules/window-function/index.js",
+    "time-stretch": "./node_modules/time-stretch/index.js",
     "pitch-shift": "./index.js"
   }
 }
@@ -307,6 +308,11 @@ function play(samples, btn) {
   let ctx = ensureCtx()
   // stop current
   if (playing) { playing.src.stop(); playing.btn.classList.remove('playing'); if (playing.btn === btn) { playing = null; return } }
+  // Prevent DAC clipping: pitch-shifting can increase crest factor (partials compress
+  // on lowered pitch, constructive interference pushes peaks above 1.0).
+  let peak = 0
+  for (let i = 0; i < samples.length; i++) { let a = Math.abs(samples[i]); if (a > peak) peak = a }
+  if (peak > 1.0) { samples = new Float32Array(samples); let s = 1.0 / peak; for (let i = 0; i < samples.length; i++) samples[i] *= s }
   let buf = ctx.createBuffer(1, samples.length, SR)
   buf.getChannelData(0).set(samples)
   let src = ctx.createBufferSource()

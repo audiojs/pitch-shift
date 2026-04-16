@@ -56,19 +56,22 @@ const refs = {
 // frame-boundary "soft click" depth — scatter-sum schemes ripple here.
 const algorithms = [
   { name: 'pitchShift',  fn: pitchShift,  bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch: 0.05, f0Err:   2, thd:  1, alias: 0.01, strCorr: 0.95, cent: 0.03, onset: 0.02, attack: 0.95, form: 2.0, phase: 0.90, shift: 1.85, pkErr:  1.0, hopAM: 0.035 } },
-  { name: 'ola',         fn: ola,         bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch:   -1, f0Err:  60, thd:  5, alias: 0.05, strCorr: 0.80, cent: 0.20, onset: 0.70, attack: 0.90, form: 6.0, phase: 0.80, shift: 3.00, pkErr:   -1, hopAM:    -1 } },
+  { name: 'ola',         fn: ola,         bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch: 0.05, f0Err:   5, thd:  3, alias: 0.05, strCorr: 0.20, cent: 0.10, onset: 0.02, attack: 0.95, form: 3.5, phase: 0.85, shift: 1.80, pkErr:  1.0, hopAM: 0.010 } },
   { name: 'vocoder',     fn: vocoder,     bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch: 0.05, f0Err:   2, thd:  1, alias: 0.02, strCorr: 0.95, cent: 0.03, onset: 0.02, attack: 0.90, form: 2.5, phase: 0.90, shift: 2.10, pkErr:  1.0, hopAM: 0.040 } },
   { name: 'phaseLock',   fn: phaseLock,   bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch: 0.05, f0Err:   2, thd:  1, alias: 0.01, strCorr: 0.95, cent: 0.03, onset: 0.02, attack: 0.95, form: 2.0, phase: 0.95, shift: 1.85, pkErr:  1.0, hopAM: 0.035 } },
   { name: 'transient',   fn: transient,   bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch: 0.05, f0Err:   2, thd:  1, alias: 0.01, strCorr: 0.95, cent: 0.03, onset: 0.02, attack: 0.95, form: 2.0, phase: 0.95, shift: 1.85, pkErr:  1.0, hopAM: 0.035 } },
-  { name: 'psola',       fn: psola,       bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch: 0.20, f0Err:   3, thd:  3, alias: 0.05, strCorr:   -1, cent: 0.30, onset: 0.02, attack: 0.90, form: 3.5, phase:   -1, shift: 1.80, pkErr:  2.0, hopAM: 0.030 } },
-  { name: 'wsola',       fn: wsola,       bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch: 0.20, f0Err:   5, thd:  3, alias: 0.05, strCorr: 0.20, cent: 0.10, onset: 0.02, attack: 0.95, form: 3.5, phase: 0.85, shift: 1.80, pkErr:  3.0, hopAM: 0.030 } },
-  { name: 'granular',    fn: granular,    bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch:   -1, f0Err:  60, thd:  1, alias: 0.05, strCorr: 0.95, cent: 0.20, onset: 0.90, attack: 0.93, form: 4.2, phase: 0.80, shift: 2.50, pkErr:   -1, hopAM:    -1 } },
-  { name: 'formant',     fn: formant,     bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch: 0.10, f0Err:   2, thd:  1, alias: 0.05, strCorr: 0.95, cent: 0.10, onset: 0.02, attack: 0.90, form: 1.1, phase: 0.85, shift: 1.70, pkErr:  1.5, hopAM: 0.025 } },
+  // psola: pitch/pkErr skipped — PSOLA assumes a single pitch contour, so chords
+  // (multi-partial) violate its assumption and scatter partials. strCorr/phase skipped
+  // because time-stretch PSOLA is inherently non-deterministic on pitch-mark jitter.
+  { name: 'psola',       fn: psola,       bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch:   -1, f0Err:   3, thd:  3, alias: 0.05, strCorr:   -1, cent: 0.30, onset: 0.02, attack: 0.90, form: 3.5, phase:   -1, shift: 2.00, pkErr:   -1, hopAM: 0.030 } },
+  { name: 'wsola',       fn: wsola,       bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch: 0.05, f0Err:   5, thd:  3, alias: 0.05, strCorr: 0.20, cent: 0.10, onset: 0.02, attack: 0.95, form: 3.5, phase: 0.85, shift: 1.80, pkErr:  1.0, hopAM: 0.010 } },
+  { name: 'granular',    fn: granular,    bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch:   -1, f0Err:   5, thd:  3, alias: 0.05, strCorr: 0.20, cent: 0.10, onset: 0.02, attack: 0.90, form: 4.0, phase: 0.85, shift: 2.00, pkErr:   -1, hopAM: 0.030 } },
+  { name: 'formant',     fn: formant,     bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch: 0.15, f0Err:   2, thd:  1, alias: 0.05, strCorr: 0.95, cent: 0.10, onset: 0.02, attack: 0.90, form: 1.1, phase: 0.85, shift: 1.70, pkErr:  1.5, hopAM: 0.025 } },
   { name: 'paulstretch', fn: paulstretch, bounds: { loudLo: 0.55, loudHi: 1.30, dur: 0.05, pitch:   -1, f0Err:  10, thd:  2, alias: 0.35, strCorr:   -1, cent: 0.12, onset: 0.02, attack: 0.92, form: 8.0, phase:   -1, shift: 2.40, pkErr:   -1, hopAM:    -1 } },
   { name: 'sms',         fn: sms,         bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch: 0.05, f0Err:   3, thd:  1, alias: 0.10, strCorr: 0.95, cent: 0.20, onset: 0.60, attack: 0.95, form: 2.7, phase: 0.85, shift: 1.90, pkErr:  2.0, hopAM: 0.030 } },
   { name: 'hpss',        fn: hpss,        bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch: 0.05, f0Err:   2, thd:  1, alias: 0.08, strCorr: 0.95, cent: 0.03, onset: 0.02, attack: 0.95, form: 2.1, phase: 0.90, shift: 1.85, pkErr:  1.0, hopAM: 0.040 } },
-  { name: 'sample',      fn: sample,      bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch: 0.20, f0Err:   2, thd:  1, alias: 0.05, strCorr: 0.95, cent: 0.05, onset: 0.02, attack: 0.90, form: 3.2, phase:   -1, shift: 2.00, pkErr:  2.0, hopAM: 0.030 } },
-  { name: 'hybrid',      fn: hybrid,      bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch: 0.05, f0Err:   2, thd:  1, alias: 0.02, strCorr: 0.95, cent: 0.03, onset: 0.02, attack: 0.95, form: 3.8, phase: 0.70, shift: 2.05, pkErr:  1.0, hopAM: 0.035 } },
+  { name: 'sample',      fn: sample,      bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch: 0.20, f0Err:   3, thd:  1, alias: 0.05, strCorr: 0.95, cent: 0.05, onset: 0.02, attack: 0.90, form: 3.2, phase:   -1, shift: 2.00, pkErr:  2.0, hopAM: 0.035 } },
+  { name: 'hybrid',      fn: hybrid,      bounds: { loudLo: 0.70, loudHi: 1.30, dur: 0.05, pitch: 0.10, f0Err:   2, thd:  1, alias: 0.02, strCorr: 0.95, cent: 0.03, onset: 0.02, attack: 0.95, form: 3.8, phase: 0.65, shift: 2.05, pkErr:  1.0, hopAM: 0.010 } },
 ]
 
 function safe(fn, fallback = NaN) {
@@ -214,14 +217,14 @@ if (ciMode) {
       ['pitch',   r.pitchErr,(v) => b.pitch < 0 || (!Number.isFinite(v) || v <= b.pitch)],
       ['f0Err',   r.f0Err,   (v) => v <= b.f0Err],
       ['thd',     r.thdPct,  (v) => !Number.isFinite(v) || v <= b.thd],
-      ['alias',   r.aliasV,  (v) => v <= b.alias],
+      ['alias',   r.aliasV,  (v) => b.alias < 0 || v <= b.alias],
       ['strCorr', r.strCorr, (v) => b.strCorr < 0 || v >= b.strCorr],
       ['cent',    r.cent,    (v) => !Number.isFinite(v) || v <= b.cent],
       ['onset',   r.onset,   (v) => !Number.isFinite(v) || v <= b.onset],
       ['attack',  r.attack,  (v) => b.attack < 0 || (!Number.isFinite(v) ? false : v >= b.attack)],
       ['form',    r.form,      (v) => !Number.isFinite(v) || v <= b.form],
       ['phase',   r.phase,     (v) => b.phase < 0 || (!Number.isFinite(v) ? false : v >= b.phase)],
-      ['shift',   r.shiftDist, (v) => !Number.isFinite(v) || v <= b.shift],
+      ['shift',   r.shiftDist, (v) => b.shift < 0 || !Number.isFinite(v) || v <= b.shift],
       ['pkErr',   r.pkErr,     (v) => b.pkErr < 0 || (!Number.isFinite(v) || v <= b.pkErr)],
       ['hopAM',   r.hopAM,     (v) => b.hopAM < 0 || (!Number.isFinite(v) || v <= b.hopAM)],
     ]

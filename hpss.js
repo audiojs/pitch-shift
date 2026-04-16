@@ -109,6 +109,9 @@ function hpssBatch(data, opts) {
   let pMag = new Float64Array(half + 1)
   let re = new Float64Array(half + 1)
   let im = new Float64Array(half + 1)
+  let newPMag = new Float64Array(half + 1)
+  let newPPhase = new Float64Array(half + 1)
+  let pShifted = new Uint8Array(half + 1)
 
   for (let f = 0; f < nFrames; f++) {
     let mag = magM[f]
@@ -127,15 +130,24 @@ function hpssBatch(data, opts) {
 
     newFlat.fill(0)
     newFreq.fill(0)
+    newPMag.fill(0)
+    newPPhase.fill(0)
+    pShifted.fill(0)
 
     // Peak-gate the harmonic component's scatter. Only bins at or adjacent (±1) to a local
     // magnitude peak are eligible — bins between chord partials have unreliable phase
     // derivatives that produce frame-rate soft clicks when scattered. See vocoder.js for
-    // the full explanation. The gating uses hMag (post-mask harmonic magnitudes) so the
-    // Wiener-suppressed percussive noise floor doesn't produce spurious "peaks".
-    let maxH = 0
-    for (let k = 0; k <= half; k++) if (hMag[k] > maxH) maxH = hMag[k]
-    let hFloor = Math.max(1e-8, maxH * 0.005)
+    // the full explanation. Peak detection uses the pre-mask `mag` (not post-mask `hMag`)
+    // because the median-filtered Wiener mask fluctuates frame-to-frame, making post-mask
+    // peaks unstable and causing intermittent scatter → phase jumps → crackling on chords.
+    //
+    // The percussive component is shifted to the same dest bins as the harmonic. Without
+    // this, harmonic energy that leaks through the soft mask passes through unshifted,
+    // creating an audible ghost at the original pitch — especially on voice, where the
+    // H/P separation is inherently leaky.
+    let maxM = 0
+    for (let k = 0; k <= half; k++) if (mag[k] > maxM) maxM = mag[k]
+    let peakFloor = Math.max(1e-8, maxM * 0.005)
 
     let prevPh = f > 0 ? phM[f - 1] : null
     for (let k = 0; k <= half; k++) {
@@ -143,7 +155,7 @@ function hpssBatch(data, opts) {
       for (let d = -1; d <= 1; d++) {
         let j = k + d
         if (j <= 0 || j >= half) continue
-        if (hMag[j] >= hFloor && hMag[j] > hMag[j - 1] && hMag[j] > hMag[j + 1]) { eligible = true; break }
+        if (mag[j] >= peakFloor && mag[j] > mag[j - 1] && mag[j] > mag[j + 1]) { eligible = true; break }
       }
       if (!eligible) continue
 
@@ -161,15 +173,28 @@ function hpssBatch(data, opts) {
         newFlat[destBin] = hMag[k]
         newFreq[destBin] = shifted
       }
+      // Shift percussive into the same dest bin, preserving original phase.
+      // This prevents harmonic leakage in the percussive mask from creating
+      // a ghost voice at the original pitch.
+      pShifted[k] = 1
+      if (pMag[k] > newPMag[destBin]) {
+        newPMag[destBin] = pMag[k]
+        newPPhase[destBin] = ph[k]
+      }
     }
 
     for (let k = 0; k <= half; k++) syn[k] = wrapPhase(syn[k] + newFreq[k] * hop)
 
     for (let k = 0; k <= half; k++) {
       let hm = newFlat[k]
-      let pm = pMag[k]
-      re[k] = hm * Math.cos(syn[k]) + pm * Math.cos(ph[k])
-      im[k] = hm * Math.sin(syn[k]) + pm * Math.sin(ph[k])
+      let pm = newPMag[k]
+      re[k] = hm * Math.cos(syn[k]) + pm * Math.cos(newPPhase[k])
+      im[k] = hm * Math.sin(syn[k]) + pm * Math.sin(newPPhase[k])
+      // Non-peak percussive bins pass through unshifted (broadband transient energy)
+      if (!pShifted[k]) {
+        re[k] += pMag[k] * Math.cos(ph[k])
+        im[k] += pMag[k] * Math.sin(ph[k])
+      }
     }
 
     let sf = ifft(re, im)

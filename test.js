@@ -29,7 +29,11 @@ function rms(data) {
 }
 
 function zeroCrossFreq(data) {
-  let start = Math.floor(data.length * 0.2), end = Math.floor(data.length * 0.8)
+  let a = 0, b = data.length
+  for (let i = data.length - 1; i >= 0; i--) if (Math.abs(data[i]) > 1e-6) { b = i + 1; break }
+  for (let i = 0; i < b; i++) if (Math.abs(data[i]) > 1e-6) { a = i; break }
+  let len = b - a
+  let start = a + Math.floor(len * 0.2), end = a + Math.floor(len * 0.8)
   let crossings = 0, prev = data[start]
   for (let i = start + 1; i < end; i++) {
     let curr = data[i]
@@ -104,8 +108,8 @@ test('pitch accuracy', () => {
   for (let [name, fn, tol] of [
     ['phaseLock', phaseLock, 12], ['vocoder', vocoder, 12], ['transient', transient, 12],
     ['sms', sms, 12], ['hpss', hpss, 12], ['hybrid', hybrid, 15],
-    ['paulstretch', paulstretch, 12], ['wsola', wsola, 20],
-    ['granular', granular, 60], ['ola', ola, 60],
+    ['paulstretch', paulstretch, 12], ['psola', psola, 3], ['wsola', wsola, 5],
+    ['sample', sample, 5], ['granular', granular, 5], ['ola', ola, 5],
   ]) {
     let out = fn(sine440, { ratio: 1.5, sampleRate })
     let f = zeroCrossFreq(out)

@@ -1,6 +1,6 @@
 # pitch-shift
 
-Canonical pitch-shifting algorithms in functional JavaScript. Each algorithm is a first-class native implementation — no shared time-stretch+resample pipeline, no wrappers. Consistent unified API: batch, stream, multi-channel. Part of the audiojs ecosystem.
+Canonical pitch-shifting algorithms in functional JavaScript. Frequency-domain algorithms (vocoder, phaseLock, transient, formant, sms, hpss) shift bins natively; time-domain algorithms (ola, wsola, psola, granular) apply their namesake stretcher from [time-stretch](https://github.com/audiojs/time-stretch) then anti-aliased sinc resample. Consistent unified API: batch, stream, multi-channel. Part of the audiojs ecosystem.
 
 ## Install
 
@@ -30,17 +30,17 @@ let stereo = phaseLock([left, right], { ratio: 1.5 })
 
 ## Algorithms
 
-Each algorithm is a canonical native pitch-shift implementation with its own character, not a wrapper over a shared pipeline.
+Each algorithm is a canonical pitch-shift implementation with its own character. Frequency-domain algorithms shift bins natively; time-domain algorithms use their namesake stretcher from [time-stretch](https://github.com/audiojs/time-stretch) + anti-aliased sinc resample — the canonical form for time-domain pitch shifting.
 
 | Algorithm | Domain | Form | Best for |
 |-----------|--------|------|----------|
-| `ola` | Time | Hann-windowed OLA with stride-`ratio` source read. Trivial, no similarity search, no pitch sync. | Baseline reference |
+| `ola` | Time | WSOLA time-stretch + sinc resample. The simplest stretch+resample pitch shift — the baseline the others improve on. | Baseline / general |
 | `vocoder` | STFT | Bin-shift phase vocoder (SMB/Bernsee). True instantaneous frequency per bin, loudest-wins scatter, synthesis phase accumulation. | Simple tonal material |
 | `phaseLock` | STFT | Laroche-Dolson peak-locked vocoder. Peaks get independent frequency shift; non-peak bins preserve phase offset relative to the nearest peak. | General music |
 | `transient` | STFT | Peak-locked vocoder with spectral-flux transient detection. On transient frames, synthesis phase resets to analysis phase, preserving attacks. | Music with percussion |
-| `psola` | Time | Native Pitch-Synchronous Overlap-Add. Autocorrelation period contour → pitch-mark detection → two-period Hann grains copied verbatim at spacing `period/ratio`. Formants preserved by construction. | Speech, monophonic voice |
-| `wsola` | Time | Granular shift + per-grain similarity search (±`tolerance` samples) against the previous grain's tail in source-stride coordinates. | Speech, low-latency |
-| `granular` | Time | Fixed-size Hann grains, stride-`ratio` source read, constant output hop. No similarity search. | Creative textures |
+| `psola` | Time | PSOLA time-stretch (autocorrelation period → pitch-mark grains) + sinc resample. Formants preserved in the stretch stage. | Speech, monophonic voice |
+| `wsola` | Time | WSOLA time-stretch (per-grain similarity search ±`tolerance`) + sinc resample. Clean time-domain shift without FFT. | Speech, low-latency |
+| `granular` | Time | OLA time-stretch with small grains (1024) + sinc resample. Grain rate is audible — the texture is the point. | Creative textures |
 | `formant` | STFT | Cepstral envelope preservation. Flatten spectrum by the real-cepstrum envelope, vocoder-shift the flat residual, re-impose the envelope. | Voice (preserves formants) |
 | `paulstretch` | STFT | Large-frame phase randomization. Magnitudes gathered from `k/ratio`; phases drawn uniformly from `[0, 2π)`. | Ambient, extreme shifts |
 | `sms` | Sinusoidal | Peak-scaled Spectral Modeling Synthesis. Parabolic-interpolated peak picking → sinusoidal lobes shifted to `round(f·ratio)`, stochastic residual preserved. | Harmonic/tonal |
@@ -52,7 +52,7 @@ Each algorithm is a canonical native pitch-shift implementation with its own cha
 
 Each algorithm preserves a different invariant and surrenders the rest. No single one wins everywhere — the reason to reach for one over another is what it keeps intact *by construction* and what it must give up for that. The guide below is what each canonical form trades.
 
-**`ola`** — Overlap-add with a stride-`ratio` source read. The simplest thing that can be called pitch shifting. *Preserves* the amplitude envelope. *Destroys* pitch precision (grain-rate beating), phase, transients. *Reach for* understanding the others — use as a baseline, not a product.
+**`ola`** — WSOLA time-stretch + sinc resample. The simplest stretch+resample pitch shift — the baseline the others improve on. *Preserves* pitch accuracy, amplitude envelope, local waveform shape. *Destroys* formants (shifted by the resample), phase coherence across long spans, transients. *Reach for* a simple, reliable pitch shift when spectral fidelity is not critical.
 
 **`vocoder`** — SMB/Bernsee bin-shift. Recovers the true instantaneous frequency of each bin from the consecutive-frame phase advance, then re-accumulates synthesis phase at the shifted frequency. *Preserves* dominant-partial pitch and long-horizon phase for each bin independently. *Destroys* transients (smeared across the frame), vertical phase coherence between adjacent bins ("phasiness"), formants. *Reach for* simple tonal material and minimal correct spectral pitch shift.
 
@@ -60,11 +60,11 @@ Each algorithm preserves a different invariant and surrenders the rest. No singl
 
 **`transient`** — `phaseLock` plus spectral-flux transient detection. On flagged frames the synthesis phase snaps back to the analysis phase so the attack shape re-emerges verbatim. *Preserves* everything `phaseLock` preserves, plus attack localization on detected transients. *Destroys* formants; misses quiet transients at a too-high threshold and smears them. *Reach for* music with percussion where `phaseLock` alone loses the attack.
 
-**`psola`** — Native Pitch-Synchronous Overlap-Add. Autocorrelation period contour → pitch-mark picking → two-period Hann grains copied verbatim and OLA'd at spacing `period/ratio`. *Preserves* waveform-per-period shape and therefore formants by construction (leading `formant dist`), attack localization, voiced-speech naturalness. *Destroys* polyphony (assumes a single pitch contour), unvoiced regions (pitch-mark jitter), and — canonically — pure sinusoids: with no formant filter to re-excite, the OLA of identical sine-shaped grains produces interference at the original fundamental rather than a shifted tone. *Reach for* monophonic speech, solo voice, or a single melodic instrument with formant structure.
+**`psola`** — PSOLA time-stretch (autocorrelation period contour → pitch-synchronous grains) + sinc resample. The stretch stage copies vocal periods verbatim, preserving formant shape; the resample stage changes pitch. *Preserves* waveform-per-period shape, attack localization, voiced-speech naturalness. *Destroys* polyphony (assumes a single pitch contour), unvoiced regions (pitch-mark jitter). *Reach for* monophonic speech, solo voice, or a single melodic instrument with formant structure.
 
-**`wsola`** — Granular shift with per-grain similarity search. Each new grain lands at the position inside a ±`tolerance` window that maximally correlates with the previous grain's tail. *Preserves* local waveform shape, attack envelopes, strict causality (small look-ahead only). *Destroys* pitch precision on pure tones (the search jitters grain boundaries), phase coherence across long spans, harmonic purity. *Reach for* low-latency speech, or anywhere the phase vocoder's frame is unacceptable.
+**`wsola`** — WSOLA time-stretch (per-grain similarity search ±`tolerance`) + sinc resample. The similarity search eliminates grain-rate phase cancellation, producing a clean time-domain pitch shift without FFT. *Preserves* local waveform shape, attack envelopes, pitch accuracy. *Destroys* formants (shifted by the resample), phase coherence across long spans. *Reach for* low-latency speech, or anywhere the phase vocoder's frame is unacceptable.
 
-**`granular`** — Fixed-size Hann grains, constant output hop, stride-`ratio` read inside each grain. No similarity search, no pitch sync. *Preserves* grain-local timbre and a characteristic textural quality. *Destroys* pitch accuracy, phase, smooth envelopes (the grain rate becomes audible). *Reach for* creative/textural effects where the grain character is the point.
+**`granular`** — OLA time-stretch with small grains (1024) + sinc resample. No similarity search, no pitch sync. The grain rate is clearly audible — the texture *is* the point. *Preserves* grain-local timbre and a characteristic textural quality. *Destroys* pitch accuracy on complex tones, smooth envelopes. *Reach for* creative/textural effects where the grain character is the point.
 
 **`formant`** — Cepstral envelope preservation wrapping a vocoder shift. Lifter-flatten the spectrum by its real-cepstrum envelope, shift the flat residual in bin space, re-impose the envelope unchanged. *Preserves* formant envelope (absolute Hz), vocal-tract character. *Destroys* what `vocoder` destroys (transients smear), risks cepstral ringing on very noisy or very sparse spectra. *Reach for* voice shifting without the chipmunk/giant artifact.
 
@@ -84,20 +84,20 @@ Each algorithm is measured across ten canonical properties on synthetic fixtures
 
 | Algorithm | f0 err | THD% | alias | stream corr | cent err | onset err | attack corr | formant dist | phase coh | shift |
 |-----------|-------:|-----:|------:|------------:|---------:|----------:|------------:|-------------:|----------:|------:|
-| `pitchShift` (auto) | 0.00 | 0.0 | 0.000 | 1.000 | 0.012 | 0.000 | 0.985 | 1.600 | 0.993 | 1.795 |
-| `phaseLock` | 0.00 | 0.0 | 0.000 | 1.000 | 0.012 | 0.000 | 0.986 | 1.591 | 0.993 | 1.796 |
-| `transient` | 0.00 | 0.0 | 0.000 | 1.000 | 0.012 | 0.000 | 0.985 | 1.600 | 0.993 | 1.795 |
-| `vocoder` | 0.00 | 0.0 | 0.000 | 1.000 | 0.006 | 0.000 | 0.983 | 1.343 | 0.922 | **1.491** |
-| `hpss` | 0.00 | 0.0 | 0.052 | 1.000 | 0.012 | 0.000 | 0.983 | 1.234 | 0.922 | 1.492 |
-| `formant` | 0.00 | 0.0 | 0.000 | 1.000 | 0.061 | 0.000 | 0.984 | **0.955** | 0.978 | 1.605 |
+| `hpss` | 0.00 | 0.0 | 0.052 | 1.000 | 0.007 | 0.000 | 0.996 | 1.267 | 0.922 | **1.464** |
+| `vocoder` | 0.00 | 0.0 | 0.000 | 1.000 | 0.006 | 0.000 | 0.983 | 1.343 | 0.922 | 1.491 |
+| `formant` | 0.00 | 0.0 | 0.000 | 1.000 | 0.061 | 0.000 | 0.984 | **1.000** | 0.981 | 1.616 |
+| `ola` | 1.00 | 0.2 | 0.005 | 1.000 | 0.003 | 0.000 | **0.995** | 2.345 | 0.869 | 1.650 |
+| `wsola` | 1.00 | 0.2 | 0.005 | 1.000 | 0.003 | 0.000 | **0.995** | 2.345 | 0.869 | 1.650 |
+| `sample` | 2.50 | 0.1 | 0.007 | 1.000 | 0.003 | 0.000 | 0.951 | 2.245 | — | 1.655 |
 | `sms` | 0.00 | 0.0 | 0.002 | 1.000 | 0.001 | 0.000 | 0.953 | 2.028 | 0.922 | 1.761 |
-| `sample` | 1.00 | 0.2 | 0.006 | 1.000 | 0.002 | 0.000 | 0.995 | 2.366 | 0.869 | 1.671 |
-| `paulstretch` | 0.00 | 0.6 | 0.258 | — | 0.001 | 0.000 | 0.941 | 7.273 | 0.778 | 2.314 |
-| `hybrid` | 0.00 | 0.0 | 0.000 | 1.000 | 0.001 | 0.000 | 0.986 | 2.981 | 0.710 | 1.871 |
-| `psola` | 0.66 | 0.2 | 0.005 | 1.000 | 0.003 | 0.000 | 0.941 | 2.340 | **0.998** | 1.768 |
-| `wsola` | 1.00 | 0.2 | 0.005 | 1.000 | 0.003 | 0.000 | 0.995 | 2.372 | 0.869 | 1.665 |
-| `granular` | 1.09 | 0.1 | 0.005 | 1.000 | 0.008 | 0.000 | 0.995 | 3.438 | 0.978 | 1.891 |
-| `ola` | 0.29 | 0.1 | 0.005 | 1.000 | 0.042 | 0.000 | 0.992 | 2.498 | 0.971 | 1.780 |
+| `pitchShift` (auto) | 0.00 | 0.0 | 0.000 | 1.000 | 0.012 | 0.000 | 0.985 | 1.600 | 0.993 | 1.795 |
+| `transient` | 0.00 | 0.0 | 0.000 | 1.000 | 0.012 | 0.000 | 0.985 | 1.600 | 0.993 | 1.795 |
+| `phaseLock` | 0.00 | 0.0 | 0.000 | 1.000 | 0.012 | 0.000 | 0.986 | 1.591 | 0.993 | 1.796 |
+| `granular` | 1.00 | 0.2 | 0.005 | 1.000 | 0.003 | 0.000 | 0.995 | 2.903 | 0.946 | 1.916 |
+| `hybrid` | 0.00 | 0.0 | 0.000 | 1.000 | 0.001 | 0.000 | 0.986 | 2.499 | 0.711 | 1.945 |
+| `psola` | 0.66 | 0.2 | 0.005 | 1.000 | 0.003 | 0.000 | 0.941 | 2.340 | **0.998** | 1.954 |
+| `paulstretch` | 1.67 | 0.3 | 0.223 | — | 0.061 | 0.000 | 0.961 | 7.449 | — | 2.241 |
 
 Columns:
 
@@ -108,8 +108,8 @@ Columns:
 - **cent err** — spectral centroid ratio error on a 3-partial chord. Lower means the timbre shifts by exactly `ratio`.
 - **onset err** — period error of a 100 Hz Dirac impulse train after shift. Measures how well impulse locations survive.
 - **attack corr** — plucked-string attack envelope correlation against the input.
-- **formant dist** — cepstral envelope distance on a synthetic vowel. Lower = formants stay put. `psola`, `formant`, and `sms` dominate here.
-- **phase coh** — AM-envelope coherence on a 5 Hz tremolo. Goertzel-extracted modulation depth, `min(out, in) / max(out, in)`. 1.0 means the slow envelope survives the shift intact. Marked — for `paulstretch` (random phase is non-deterministic), `psola` (TD-PSOLA has no frame-level phase model), and `sample` (time-compresses, so the modulation rate itself shifts).
+- **formant dist** — cepstral envelope distance on a synthetic vowel. Lower = formants stay put. `formant` dominates here by construction.
+- **phase coh** — AM-envelope coherence on a 5 Hz tremolo. Goertzel-extracted modulation depth, `min(out, in) / max(out, in)`. 1.0 means the slow envelope survives the shift intact. Marked — for `paulstretch` (random phase is non-deterministic) and `sample` (time-compresses, so the modulation rate itself shifts).
 - **shift** (log-mag) — direct log-magnitude spectral distance between the algorithm output and the canonical shifted reference, averaged over four harmonic ground-truth fixtures: `sine(660)`, `sineChord(330, [1,1.25,1.5])`, `karplusStrong(330)`, and `amSine(660)`. Gain- and phase-invariant. Bold = leader. The single best "how close to the ideal pitch shift" number.
 
 Notes. `formant`, `hpss`, and `sms` dominate formant preservation by construction. `transient` dominates transient preservation on drum material even though `attack corr` on a plucked string is close across algorithms. `paulstretch` stream-vs-batch is marked — because random phase synthesis decorrelates by design. See `scripts/fixtures.js` and `scripts/metrics.js` for the full rig.
@@ -236,6 +236,7 @@ npm run bench
 
 ## Dependencies
 
+- [time-stretch](https://github.com/audiojs/time-stretch) — Time-domain stretchers (WSOLA, PSOLA) used by time-domain pitch-shift algorithms
 - [fourier-transform](https://github.com/audiojs/fourier-transform) — FFT
 - [window-function](https://github.com/audiojs/window-function) — Hann windowing
 

@@ -1,20 +1,15 @@
+import { wsola as stretch } from 'time-stretch'
 import { bufferedStream, makePitchShift, resampleTo, resolvePitchParams } from './util.js'
-import { wsolaStretch } from './stretch.js'
 
-// Overlap-Add pitch shift: time-stretch by `ratio` (OLA with a minimal similarity-lock
-// window just large enough to keep pitched content in phase) then resample back to the
-// original length. `delta = frameSize/16` is much lighter than wsola's frameSize/4, so
-// the classical OLA character stays (audible graininess on busy material) while simple
-// tones land on-pitch at their canonical amplitude — not 60% quieter and 38 Hz off.
-
+// Overlap-Add pitch shift (Flanagan-Golden). WSOLA time-stretch at `factor = ratio`
+// with a moderate similarity search to prevent grain-rate phase cancellation, followed
+// by anti-aliased sinc resample back to original length. The simplest practical
+// stretch+resample pitch shift — the baseline the others improve on.
 function olaBatch(data, opts) {
-  let frameSize = opts?.frameSize ?? 2048
   let { ratio } = resolvePitchParams(opts)
-  let stretched = wsolaStretch(data, ratio, {
-    frameSize,
-    hopSize: opts?.hopSize,
-    delta: opts?.delta ?? Math.max(16, frameSize >> 4),
-  })
+  let frameSize = opts?.frameSize ?? 2048
+  let hopSize = opts?.hopSize ?? (frameSize >> 2)
+  let stretched = stretch(data, { factor: ratio, frameSize, hopSize })
   return resampleTo(stretched, data.length)
 }
 
