@@ -1,5 +1,5 @@
 import { stftBatch, stftStream } from './stft.js'
-import { matchGain, wrapPhase, makePitchShift, resolvePitchParams } from './util.js'
+import { matchGain, wrapPhase, makePitchShift, resolveRatio } from './util.js'
 
 // Transient-aware phase vocoder pitch shift.
 // On detected transient frames, phase is reset to the analysis phase (vertical coherence is
@@ -33,8 +33,12 @@ function nearestPeak(peaks, k) {
 }
 
 function makeProcess(ratio, threshold) {
+  let ratioFn = typeof ratio === 'function' ? ratio : null
+  let scalar = ratioFn ? ratioFn(0) : ratio
   return function process(mag, phase, state, ctx) {
-    let { half, hop, freqPerBin } = ctx
+    let { half, hop, freqPerBin, sampleRate, frameStart } = ctx
+    let ratio = ratioFn ? ratioFn(Math.max(0, frameStart) / sampleRate) : scalar
+    if (!Number.isFinite(ratio) || ratio <= 0) ratio = scalar || 1
     if (!state.prev) {
       state.prev = new Float64Array(half + 1)
       state.prevMag = new Float64Array(half + 1)
@@ -125,16 +129,16 @@ function makeProcess(ratio, threshold) {
 }
 
 function transientBatch(data, opts) {
-  let { ratio } = resolvePitchParams(opts)
+  let { ratio, ratioFn } = resolveRatio(opts)
   let threshold = opts?.transientThreshold ?? 1.5
-  let out = stftBatch(data, makeProcess(ratio, threshold), { ...opts, ratio })
+  let out = stftBatch(data, makeProcess(ratioFn || ratio, threshold), { ...opts, ratio, ratioFn })
   return matchGain(out, data)
 }
 
 function transientStream(opts) {
-  let { ratio } = resolvePitchParams(opts)
+  let { ratio, ratioFn } = resolveRatio(opts)
   let threshold = opts?.transientThreshold ?? 1.5
-  let s = stftStream(makeProcess(ratio, threshold), { ...opts, ratio })
+  let s = stftStream(makeProcess(ratioFn || ratio, threshold), { ...opts, ratio, ratioFn })
   return (chunk) => chunk === undefined ? s.flush() : s.write(chunk)
 }
 

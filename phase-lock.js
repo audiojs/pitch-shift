@@ -23,11 +23,13 @@ function findPeaks(mag, half) {
   return peaks
 }
 
-function makeProcess(scalarRatio, ratioFn) {
+function makeProcess(ratio) {
+  let ratioFn = typeof ratio === 'function' ? ratio : null
+  let scalar = ratioFn ? ratioFn(0) : ratio
   return function process(mag, phase, state, ctx) {
     let { half, hop, freqPerBin, sampleRate, frameStart } = ctx
-    let ratio = ratioFn ? ratioFn(Math.max(0, frameStart) / sampleRate) : scalarRatio
-    if (!Number.isFinite(ratio) || ratio <= 0) ratio = scalarRatio || 1
+    let ratio = ratioFn ? ratioFn(Math.max(0, frameStart) / sampleRate) : scalar
+    if (!Number.isFinite(ratio) || ratio <= 0) ratio = scalar || 1
     if (!state.prev) {
       state.prev = new Float64Array(half + 1)
       state.syn = new Float64Array(half + 1)
@@ -113,13 +115,13 @@ function makeProcess(scalarRatio, ratioFn) {
 
 function phaseLockBatch(data, opts) {
   let { ratio, ratioFn } = resolveRatio(opts)
-  let out = stftBatch(data, makeProcess(ratio, ratioFn), { ...opts, ratio, ratioFn })
+  let out = stftBatch(data, makeProcess(ratioFn || ratio), { ...opts, ratio, ratioFn })
   return matchGain(out, data)
 }
 
 function phaseLockStream(opts) {
   let { ratio, ratioFn } = resolveRatio(opts)
-  let s = stftStream(makeProcess(ratio, ratioFn), { ...opts, ratio, ratioFn })
+  let s = stftStream(makeProcess(ratioFn || ratio), { ...opts, ratio, ratioFn })
   return (chunk) => chunk === undefined ? s.flush() : s.write(chunk)
 }
 

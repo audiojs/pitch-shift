@@ -1,5 +1,5 @@
 import { stftBatch, stftStream } from './stft.js'
-import { matchGain, wrapPhase, makePitchShift, resolvePitchParams } from './util.js'
+import { matchGain, wrapPhase, makePitchShift, resolveRatio } from './util.js'
 
 // Spectral Modeling Synthesis (Serra/Smith) pitch shift.
 // Decomposes each frame into sinusoidal peaks (partials) + stochastic residual.
@@ -15,8 +15,12 @@ function parabolicInterpolate(mag, k) {
 }
 
 function makeProcess(ratio, maxTracks, minMag) {
+  let ratioFn = typeof ratio === 'function' ? ratio : null
+  let scalar = ratioFn ? ratioFn(0) : ratio
   return function process(mag, phase, state, ctx) {
-    let { half, hop, freqPerBin } = ctx
+    let { half, hop, freqPerBin, sampleRate, frameStart } = ctx
+    let ratio = ratioFn ? ratioFn(Math.max(0, frameStart) / sampleRate) : scalar
+    if (!Number.isFinite(ratio) || ratio <= 0) ratio = scalar || 1
     if (!state.prev) {
       state.prev = new Float64Array(half + 1)
       state.syn = new Float64Array(half + 1)
@@ -115,18 +119,18 @@ function makeProcess(ratio, maxTracks, minMag) {
 }
 
 function smsBatch(data, opts) {
-  let { ratio } = resolvePitchParams(opts)
+  let { ratio, ratioFn } = resolveRatio(opts)
   let maxTracks = opts?.maxTracks ?? Infinity
   let minMag = opts?.minMag ?? 1e-4
-  let out = stftBatch(data, makeProcess(ratio, maxTracks, minMag), { ...opts, ratio })
+  let out = stftBatch(data, makeProcess(ratioFn || ratio, maxTracks, minMag), { ...opts, ratio, ratioFn })
   return matchGain(out, data)
 }
 
 function smsStream(opts) {
-  let { ratio } = resolvePitchParams(opts)
+  let { ratio, ratioFn } = resolveRatio(opts)
   let maxTracks = opts?.maxTracks ?? Infinity
   let minMag = opts?.minMag ?? 1e-4
-  let s = stftStream(makeProcess(ratio, maxTracks, minMag), { ...opts, ratio })
+  let s = stftStream(makeProcess(ratioFn || ratio, maxTracks, minMag), { ...opts, ratio, ratioFn })
   return (chunk) => chunk === undefined ? s.flush() : s.write(chunk)
 }
 

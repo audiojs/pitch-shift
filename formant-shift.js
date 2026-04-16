@@ -1,6 +1,6 @@
 import { fft, ifft } from 'fourier-transform'
 import { stftBatch, stftStream } from './stft.js'
-import { matchGain, wrapPhase, makePitchShift, resolvePitchParams } from './util.js'
+import { matchGain, wrapPhase, makePitchShift, resolveRatio } from './util.js'
 
 // Formant-preserving pitch shift. The spectral envelope is extracted via cepstral liftering
 // (low-quefrency coefficients) from the original frame. A peak-locked phase vocoder then
@@ -58,8 +58,12 @@ function assignedPeak(peaks, k) {
 }
 
 function makeProcess(ratio, envelopeWidth) {
+  let ratioFn = typeof ratio === 'function' ? ratio : null
+  let scalar = ratioFn ? ratioFn(0) : ratio
   return function process(mag, phase, state, ctx) {
-    let { N, half, hop, freqPerBin } = ctx
+    let { N, half, hop, freqPerBin, sampleRate, frameStart } = ctx
+    let ratio = ratioFn ? ratioFn(Math.max(0, frameStart) / sampleRate) : scalar
+    if (!Number.isFinite(ratio) || ratio <= 0) ratio = scalar || 1
     if (!state.prev) {
       state.prev = new Float64Array(half + 1)
       state.syn = new Float64Array(half + 1)
@@ -150,18 +154,18 @@ function makeProcess(ratio, envelopeWidth) {
 }
 
 function formantBatch(data, opts) {
-  let { ratio } = resolvePitchParams(opts)
+  let { ratio, ratioFn } = resolveRatio(opts)
   let frameSize = opts?.frameSize ?? 2048
   let envelopeWidth = opts?.envelopeWidth ?? Math.max(8, Math.round(frameSize / 64))
-  let out = stftBatch(data, makeProcess(ratio, envelopeWidth), { ...opts, ratio, frameSize })
+  let out = stftBatch(data, makeProcess(ratioFn || ratio, envelopeWidth), { ...opts, ratio, ratioFn, frameSize })
   return matchGain(out, data)
 }
 
 function formantStream(opts) {
-  let { ratio } = resolvePitchParams(opts)
+  let { ratio, ratioFn } = resolveRatio(opts)
   let frameSize = opts?.frameSize ?? 2048
   let envelopeWidth = opts?.envelopeWidth ?? Math.max(8, Math.round(frameSize / 64))
-  let s = stftStream(makeProcess(ratio, envelopeWidth), { ...opts, ratio, frameSize })
+  let s = stftStream(makeProcess(ratioFn || ratio, envelopeWidth), { ...opts, ratio, ratioFn, frameSize })
   return (chunk) => chunk === undefined ? s.flush() : s.write(chunk)
 }
 

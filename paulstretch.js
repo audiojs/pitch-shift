@@ -1,5 +1,5 @@
 import { stftBatch, stftStream } from './stft.js'
-import { makePitchShift, resolvePitchParams, PI2 } from './util.js'
+import { makePitchShift, resolveRatio, PI2 } from './util.js'
 
 // Peak-match (not RMS-match) because the random-phase reconstruction is noise-like:
 // its sample distribution is approximately Gaussian with peaks at ~3× RMS. Matching RMS
@@ -21,8 +21,12 @@ function matchPeak(out, ref) {
 // producing the signature smooth, textural timbre — now shifted in pitch.
 
 function makeProcess(ratio) {
+  let ratioFn = typeof ratio === 'function' ? ratio : null
+  let scalar = ratioFn ? ratioFn(0) : ratio
   return function process(mag, phase, state, ctx) {
-    let { half } = ctx
+    let { half, sampleRate, frameStart } = ctx
+    let ratio = ratioFn ? ratioFn(Math.max(0, frameStart) / sampleRate) : scalar
+    if (!Number.isFinite(ratio) || ratio <= 0) ratio = scalar || 1
     let newMag = new Float64Array(half + 1)
     let newPhase = new Float64Array(half + 1)
     for (let k = 0; k <= half; k++) {
@@ -42,18 +46,18 @@ function makeProcess(ratio) {
 // ~10 Hz — safely under the audible AM floor — by using very large frames and a 1/4 hop.
 // At sr=44100 the 16 k/4 k pair gives ~10.8 Hz, inaudible as amplitude modulation.
 function paulBatch(data, opts) {
-  let { ratio } = resolvePitchParams(opts)
+  let { ratio, ratioFn } = resolveRatio(opts)
   let frameSize = opts?.frameSize ?? 16384
   let hopSize = opts?.hopSize ?? (frameSize >> 2)
-  let out = stftBatch(data, makeProcess(ratio), { ...opts, ratio, frameSize, hopSize })
+  let out = stftBatch(data, makeProcess(ratioFn || ratio), { ...opts, ratio, ratioFn, frameSize, hopSize })
   return matchPeak(out, data)
 }
 
 function paulStream(opts) {
-  let { ratio } = resolvePitchParams(opts)
+  let { ratio, ratioFn } = resolveRatio(opts)
   let frameSize = opts?.frameSize ?? 16384
   let hopSize = opts?.hopSize ?? (frameSize >> 2)
-  let s = stftStream(makeProcess(ratio), { ...opts, ratio, frameSize, hopSize })
+  let s = stftStream(makeProcess(ratioFn || ratio), { ...opts, ratio, ratioFn, frameSize, hopSize })
   return (chunk) => chunk === undefined ? s.flush() : s.write(chunk)
 }
 

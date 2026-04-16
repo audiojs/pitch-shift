@@ -1,13 +1,17 @@
 import { stftBatch, stftStream } from './stft.js'
-import { matchGain, wrapPhase, makePitchShift, resolvePitchParams } from './util.js'
+import { matchGain, wrapPhase, makePitchShift, resolveRatio } from './util.js'
 
 // Canonical phase vocoder pitch shift (Bernsee / SMB method).
 // Per frame: compute true instantaneous frequency at each analysis bin, shift each bin's
 // contribution to a new bin position determined by that frequency × ratio, and accumulate
 // synthesis phase at the shifted frequency. No time-stretch, no resample.
 function makeProcess(ratio) {
+  let ratioFn = typeof ratio === 'function' ? ratio : null
+  let scalar = ratioFn ? ratioFn(0) : ratio
   return function process(mag, phase, state, ctx) {
-    let { half, hop, freqPerBin } = ctx
+    let { half, hop, freqPerBin, sampleRate, frameStart } = ctx
+    let ratio = ratioFn ? ratioFn(Math.max(0, frameStart) / sampleRate) : scalar
+    if (!Number.isFinite(ratio) || ratio <= 0) ratio = scalar || 1
     if (!state.prev) {
       state.prev = new Float64Array(half + 1)
       state.syn = new Float64Array(half + 1)
@@ -68,14 +72,14 @@ function makeProcess(ratio) {
 }
 
 function vocoderBatch(data, opts) {
-  let { ratio } = resolvePitchParams(opts)
-  let out = stftBatch(data, makeProcess(ratio), { ...opts, ratio })
+  let { ratio, ratioFn } = resolveRatio(opts)
+  let out = stftBatch(data, makeProcess(ratioFn || ratio), { ...opts, ratio, ratioFn })
   return matchGain(out, data)
 }
 
 function vocoderStream(opts) {
-  let { ratio } = resolvePitchParams(opts)
-  let s = stftStream(makeProcess(ratio), { ...opts, ratio })
+  let { ratio, ratioFn } = resolveRatio(opts)
+  let s = stftStream(makeProcess(ratioFn || ratio), { ...opts, ratio, ratioFn })
   return (chunk) => chunk === undefined ? s.flush() : s.write(chunk)
 }
 

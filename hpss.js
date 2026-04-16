@@ -1,5 +1,5 @@
 import { fft, ifft } from 'fourier-transform'
-import { PI2, hannWindow, matchGain, wrapPhase, makePitchShift, resolvePitchParams, bufferedStream } from './util.js'
+import { PI2, hannWindow, matchGain, wrapPhase, makePitchShift, resolveRatio, bufferedStream } from './util.js'
 
 // Harmonic/Percussive Source Separation (Fitzgerald 2010) + per-component pitch shift.
 //
@@ -32,7 +32,7 @@ function medianSort(buf, len) {
 }
 
 function hpssBatch(data, opts) {
-  let { ratio } = resolvePitchParams(opts)
+  let { ratio, ratioFn } = resolveRatio(opts)
   let N = opts?.frameSize ?? 2048
   let hop = opts?.hopSize ?? (N >> 2)
   let half = N >> 1
@@ -43,6 +43,7 @@ function hpssBatch(data, opts) {
   let power = opts?.hpssPower ?? 2
   let win = hannWindow(N)
   let freqPerBin = PI2 / N
+  let sr = opts?.sampleRate || 44100
 
   let pad = N
   let padded = new Float32Array(data.length + pad * 2)
@@ -114,6 +115,8 @@ function hpssBatch(data, opts) {
   let pShifted = new Uint8Array(half + 1)
 
   for (let f = 0; f < nFrames; f++) {
+    let r = ratioFn ? ratioFn(Math.max(0, f * hop - pad) / sr) : ratio
+    if (!Number.isFinite(r) || r <= 0) r = ratio || 1
     let mag = magM[f]
     let ph = phM[f]
     let mh = Mh[f]
@@ -166,7 +169,7 @@ function hpssBatch(data, opts) {
         let dp = wrapPhase(ph[k] - prevPh[k] - k * freqPerBin * hop)
         trueFreq = k * freqPerBin + dp / hop
       }
-      let shifted = trueFreq * ratio
+      let shifted = trueFreq * r
       let destBin = Math.round(shifted / freqPerBin)
       if (destBin < 0 || destBin > half) continue
       if (hMag[k] > newFlat[destBin]) {

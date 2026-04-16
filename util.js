@@ -39,7 +39,7 @@ export function resolvePitchParams(opts) {
   if (!Number.isFinite(semitones)) throw new TypeError('pitchShift: `semitones` must be a finite number')
   let raw = opts?.ratio
   if (typeof raw === 'function' || raw instanceof Float32Array) {
-    throw new TypeError('pitchShift: variable `ratio` (function or Float32Array) is only supported by phaseLock and sample')
+    throw new TypeError('pitchShift: variable `ratio` (function or Float32Array) is supported by vocoder, phaseLock, transient, formant, paulstretch, sms, hpss, and sample')
   }
   let ratio = raw ?? (semitones ? Math.pow(2, semitones / 12) : 1)
   if (!Number.isFinite(ratio) || ratio <= 0) throw new TypeError('pitchShift: `ratio` must be a finite number > 0')

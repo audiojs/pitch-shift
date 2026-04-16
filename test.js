@@ -119,9 +119,9 @@ test('pitch accuracy', () => {
 
 // ─── Variable ratio ───────────────────────────────────────────────────────────
 
-test('variable ratio: phaseLock and sample accept time-function', () => {
+test('variable ratio: frequency-domain + sample accept time-function', () => {
   let curve = t => 1 + 0.1 * Math.sin(2 * Math.PI * 3 * t)
-  for (let [name, fn] of [['phaseLock', phaseLock], ['sample', sample]]) {
+  for (let [name, fn] of [['phaseLock', phaseLock], ['vocoder', vocoder], ['transient', transient], ['formant', formant], ['sms', sms], ['sample', sample]]) {
     let out = fn(sine440, { ratio: curve, sampleRate })
     ok(out instanceof Float32Array, `${name} returns Float32Array`)
     is(out.length, sine440.length, `${name} preserves length`)
@@ -129,9 +129,9 @@ test('variable ratio: phaseLock and sample accept time-function', () => {
   }
 })
 
-test('variable ratio: spectral algorithms reject function ratio', () => {
+test('variable ratio: time-domain algorithms reject function ratio', () => {
   let curve = t => 1 + 0.1 * Math.sin(2 * Math.PI * 3 * t)
-  for (let [name, fn] of [['vocoder', vocoder], ['transient', transient], ['psola', psola]]) {
+  for (let [name, fn] of [['psola', psola], ['wsola', wsola], ['ola', ola], ['granular', granular]]) {
     throws(() => fn(sine440, { ratio: curve, sampleRate }), /variable|supported/, `${name} rejects function ratio`)
   }
 })

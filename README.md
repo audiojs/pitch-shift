@@ -147,7 +147,7 @@ Default export selection:
 
 ### Variable pitch (pitch curves)
 
-`phaseLock` and `sample` accept a time-varying `ratio` — either a function `(timeSeconds) => ratio` or a `Float32Array` sampled uniformly across the input duration.
+All frequency-domain algorithms (`vocoder`, `phaseLock`, `transient`, `formant`, `sms`, `paulstretch`, `hpss`) and `sample` accept a time-varying `ratio` — either a function `(timeSeconds) => ratio` or a `Float32Array` sampled uniformly across the input duration. STFT-based algorithms evaluate the ratio per frame; `sample` evaluates per output sample.
 
 ```js
 // Sinusoidal vibrato: ±10% pitch at 5 Hz
@@ -164,7 +164,43 @@ let glide = sample(audio, {
 })
 ```
 
-Other algorithms reject function/array `ratio` with a clear error — their canonical forms assume a single global ratio.
+Time-domain algorithms (`ola`, `wsola`, `psola`, `granular`) and `hybrid` reject function/array `ratio` — their stretch+resample form applies a single global ratio to the whole signal.
+
+#### Pitch correction
+
+Variable pitch enables pitch correction when combined with a pitch detector. Detect the sung pitch per frame, compute the ratio to the nearest target note, and pass the correction curve as a `ratio` function:
+
+```js
+import { yin } from 'pitch-detection'
+import { formant } from 'pitch-shift'
+
+// 1. Detect pitch per frame
+let hop = 512, sr = 44100
+let pitchFrames = []
+for (let i = 0; i + 2048 <= audio.length; i += hop) {
+  let r = yin(audio.subarray(i, i + 2048), { fs: sr })
+  pitchFrames.push(r ? { freq: r.freq, clarity: r.clarity } : null)
+}
+
+// 2. Snap to nearest scale degree
+let scale = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88] // C major
+let snap = (f) => scale.reduce((a, b) =>
+  Math.abs(Math.log2(b / f)) < Math.abs(Math.log2(a / f)) ? b : a
+)
+
+// 3. Build correction curve and apply
+let corrected = formant(audio, {
+  ratio: (t) => {
+    let idx = Math.min(Math.round(t * sr / hop), pitchFrames.length - 1)
+    let p = pitchFrames[idx]
+    if (!p || p.clarity < 0.5) return 1  // unvoiced → no correction
+    return snap(p.freq) / p.freq
+  },
+  sampleRate: sr,
+})
+```
+
+`formant` is the natural choice for voice correction (preserves vowel character). For the hard-tune "auto-tune effect", use `phaseLock` with aggressive snapping. For harmonic instruments, `sms` preserves partial structure while following the correction curve.
 
 ### Examples
 
