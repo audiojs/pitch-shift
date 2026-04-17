@@ -72,7 +72,7 @@
   },
   "dependencies": {
     "fourier-transform": "^2.0.0",
-    "time-stretch": "^1.2.0",
+    "time-stretch": "^1.2.1",
     "window-function": "^3.0.0"
   },
   "devDependencies": {

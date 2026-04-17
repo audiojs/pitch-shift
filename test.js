@@ -1,4 +1,5 @@
 import pitchShift, { ola, vocoder, phaseLock, transient, psola, wsola, formant, granular, paulstretch, sms, hpss, sample, hybrid } from './index.js'
+import { modulationDepth } from 'time-stretch'
 import test, { ok, is, throws, run } from 'tst'
 
 const sampleRate = 44100
@@ -248,6 +249,23 @@ test('psola mono quality exceeds psola chord quality', () => {
   let chordRms = rms(chordOut) / rms(cMajor)
 
   ok(monoRms > chordRms, `mono rms ratio (${monoRms.toFixed(3)}) > chord rms ratio (${chordRms.toFixed(3)})`)
+})
+
+test('chord modulation depth: granular crumbles, others clean', () => {
+  // modulationDepth measures per-partial amplitude wobble — the "crumble" artifact.
+  // With time-stretch 1.2.1's input-target WSOLA, all methods are clean on chords
+  // except granular, whose small grains (1024) cause audible AM by design.
+  let ratio = 1.5
+  let shifted = [261.63, 329.63, 392.00].map(f => f * ratio)
+  let plMod = modulationDepth(phaseLock(cMajor, { ratio, sampleRate }), shifted, sampleRate)
+  let wsMod = modulationDepth(wsola(cMajor, { ratio, sampleRate }), shifted, sampleRate)
+  let psMod = modulationDepth(psola(cMajor, { ratio, sampleRate }), shifted, sampleRate)
+  let grMod = modulationDepth(granular(cMajor, { ratio, sampleRate }), shifted, sampleRate)
+
+  ok(plMod < 0.05, `phaseLock modDepth=${plMod.toFixed(3)} (clean)`)
+  ok(wsMod < 0.05, `wsola modDepth=${wsMod.toFixed(3)} (clean)`)
+  ok(psMod < 0.05, `psola modDepth=${psMod.toFixed(3)} (clean, falls through to wsola)`)
+  ok(grMod > 0.10, `granular modDepth=${grMod.toFixed(3)} (small grains → audible AM)`)
 })
 
 run()
