@@ -20,27 +20,25 @@ function matchPeak(out, ref) {
 // magnitudes gathered from source-bin k/ratio. Destroys temporal transients by design,
 // producing the signature smooth, textural timbre — now shifted in pitch.
 
-function makeProcess(ratio) {
-  let fr = makeFrameRatio(ratio)
-  return function process(mag, phase, state, ctx) {
-    let { half } = ctx
-    let ratio = fr.at(ctx.frameStart, ctx.sampleRate)
-    if (!state.newMag) {
-      state.newMag = new Float64Array(half + 1)
-      state.newPhase = new Float64Array(half + 1)
-    }
-    let { newMag, newPhase } = state
-    newMag.fill(0)
-    for (let k = 0; k <= half; k++) {
-      let src = k / ratio
-      if (src > half) continue
-      let i = src | 0
-      let f = src - i
-      newMag[k] = mag[i] * (1 - f) + (i + 1 <= half ? mag[i + 1] : 0) * f
-      newPhase[k] = Math.random() * PI2
-    }
-    return { mag: newMag, phase: newPhase }
+function process(mag, phase, state, ctx) {
+  if (!state.fr) state.fr = makeFrameRatio(ctx.ratioFn || ctx.ratio || 1)
+  let { half } = ctx
+  let ratio = state.fr.at(ctx.frameStart, ctx.sampleRate)
+  if (!state.newMag) {
+    state.newMag = new Float64Array(half + 1)
+    state.newPhase = new Float64Array(half + 1)
   }
+  let { newMag, newPhase } = state
+  newMag.fill(0)
+  for (let k = 0; k <= half; k++) {
+    let src = k / ratio
+    if (src > half) continue
+    let i = src | 0
+    let f = src - i
+    newMag[k] = mag[i] * (1 - f) + (i + 1 <= half ? mag[i + 1] : 0) * f
+    newPhase[k] = Math.random() * PI2
+  }
+  return { mag: newMag, phase: newPhase }
 }
 
 // Paulstretch's defining randomized phase means adjacent frames recombine incoherently,
@@ -51,7 +49,7 @@ function paulBatch(data, opts) {
   let { ratio, ratioFn } = resolveRatio(opts)
   let frameSize = opts?.frameSize ?? 16384
   let hopSize = opts?.hopSize ?? (frameSize >> 2)
-  let out = stftBatch(data, makeProcess(ratioFn || ratio), { ...opts, ratio, ratioFn, frameSize, hopSize })
+  let out = stftBatch(data, process, { ...opts, ratio, ratioFn, frameSize, hopSize })
   return matchPeak(out, data)
 }
 
@@ -59,7 +57,7 @@ function paulStream(opts) {
   let { ratio, ratioFn } = resolveRatio(opts)
   let frameSize = opts?.frameSize ?? 16384
   let hopSize = opts?.hopSize ?? (frameSize >> 2)
-  let s = stftStream(makeProcess(ratioFn || ratio), { ...opts, ratio, ratioFn, frameSize, hopSize })
+  let s = stftStream(process, { ...opts, ratio, ratioFn, frameSize, hopSize })
   return (chunk) => chunk === undefined ? s.flush() : s.write(chunk)
 }
 
