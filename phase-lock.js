@@ -40,10 +40,10 @@ function makeProcess(ratio) {
         peakDest[i] = -1
         continue
       }
-      let newSyn = wrapPhase(syn[k] + shifted * hop)
+      let newSyn = wrapPhase(syn[destBin] + shifted * hop)
       peakDest[i] = destBin
       peakSynPhase[i] = newSyn
-      syn[k] = newSyn
+      syn[destBin] = newSyn
     }
 
     for (let k = 0; k <= half; k++) {

@@ -66,10 +66,10 @@ function makeProcess(ratio, threshold) {
       let shifted = trueFreq * ratio
       let destBin = Math.round(shifted / freqPerBin)
       if (destBin < 0 || destBin > half) { peakDest[i] = -1; continue }
-      let newSyn = isTransient ? phase[k] : wrapPhase(syn[k] + shifted * hop)
+      let newSyn = isTransient ? phase[k] : wrapPhase(syn[destBin] + shifted * hop)
       peakDest[i] = destBin
       peakSynPhase[i] = newSyn
-      syn[k] = newSyn
+      syn[destBin] = newSyn
     }
 
     for (let k = 0; k <= half; k++) {
