@@ -59,18 +59,18 @@ Measured on synthetic fixtures with exact ground truth. **shift** = log-magnitud
 |-----------|-------:|-----:|------:|------------:|---------:|----------:|------------:|-------------:|----------:|------:|
 | `hpss` | 0.00 | 0.0 | 0.052 | 1.000 | 0.007 | 0.000 | 0.996 | 1.267 | 0.922 | **1.464** |
 | `vocoder` | 0.00 | 0.0 | 0.000 | 1.000 | 0.006 | 0.000 | 0.983 | 1.343 | 0.922 | 1.491 |
-| `formant` | 0.00 | 0.0 | 0.000 | 1.000 | 0.061 | 0.000 | 0.984 | **1.000** | 0.981 | 1.616 |
-| `ola` | 1.00 | 0.2 | 0.005 | 1.000 | 0.003 | 0.000 | **0.995** | 2.345 | 0.869 | 1.650 |
+| `formant` | 0.00 | 0.0 | 0.000 | 1.000 | 0.061 | 0.000 | 0.988 | **0.921** | 0.980 | 1.593 |
+| `sample` | 2.50 | 0.1 | 0.007 | 1.000 | 0.003 | 0.000 | 0.951 | 2.245 | 0.170 | 1.655 |
 | `wsola` | 1.00 | 0.2 | 0.005 | 1.000 | 0.003 | 0.000 | **0.995** | 2.345 | 0.866 | 1.672 |
-| `sample` | 2.50 | 0.1 | 0.007 | 1.000 | 0.003 | 0.000 | 0.951 | 2.245 | — | 1.655 |
 | `sms` | 0.00 | 0.0 | 0.002 | 1.000 | 0.001 | 0.000 | 0.953 | 2.028 | 0.922 | 1.761 |
+| `psola` | 0.66 | 0.2 | 0.005 | 1.000 | 0.003 | 0.000 | 0.941 | 2.340 | **0.998** | 1.767 |
+| `phaseLock` | 0.00 | 0.0 | 0.000 | 1.000 | 0.012 | 0.000 | 0.988 | 1.623 | 0.991 | 1.775 |
 | `pitchShift` (auto) | 0.00 | 0.0 | 0.000 | 1.000 | 0.012 | 0.000 | 0.988 | 1.619 | 0.991 | 1.781 |
 | `transient` | 0.00 | 0.0 | 0.000 | 1.000 | 0.012 | 0.000 | 0.988 | 1.619 | 0.991 | 1.781 |
-| `phaseLock` | 0.00 | 0.0 | 0.000 | 1.000 | 0.012 | 0.000 | 0.988 | 1.623 | 0.991 | 1.775 |
-| `granular` | 1.00 | 0.2 | 0.005 | 1.000 | 0.003 | 0.000 | 0.995 | 2.903 | 0.946 | 1.916 |
+| `granular` | 0.95 | 0.2 | 0.005 | 1.000 | 0.019 | 0.000 | 0.995 | 2.796 | 0.945 | 1.905 |
 | `hybrid` | 0.00 | 0.0 | 0.000 | 1.000 | 0.004 | 0.000 | 0.988 | 2.538 | 0.879 | 1.925 |
-| `psola` | 0.66 | 0.2 | 0.005 | 1.000 | 0.003 | 0.000 | 0.941 | 2.340 | **0.998** | 1.954 |
-| `paulstretch` | 1.67 | 0.3 | 0.223 | — | 0.061 | 0.000 | 0.961 | 7.449 | — | 2.241 |
+| `ola` | 39.59 | 0.1 | 0.005 | 1.000 | 0.042 | 0.388 | 0.977 | 2.360 | 0.992 | 2.050 |
+| `paulstretch` | 0.00 | 0.3 | 0.232 | — | 0.005 | 0.000 | 0.954 | 7.113 | — | 2.339 |
 
 <details><summary>Column definitions</summary>
 
@@ -82,22 +82,29 @@ Measured on synthetic fixtures with exact ground truth. **shift** = log-magnitud
 - **onset err** — impulse-train period error after shift.
 - **attack corr** — plucked-string attack envelope correlation.
 - **formant dist** — cepstral envelope distance on synthetic vowel. Lower = formants preserved.
-- **phase coh** — AM-envelope coherence on 5 Hz tremolo. `—` for non-deterministic algorithms.
+- **phase coh** — AM-envelope coherence on 5 Hz tremolo. `—` for `paulstretch` (non-deterministic).
 - **shift** — log-magnitude distance to canonical shifted reference, averaged over four fixtures. Bold = leader.
 
 </details>
 
 ### Options
 
+All algorithms accept:
+
 | Option | Default | Description |
 |--------|---------|-------------|
-| `ratio` | `1` | Pitch shift ratio (1.5 = +5 semitones, 2 = +1 octave) |
-| `semitones` | from ratio | Pitch shift in semitones |
-| `content` | `music` | Auto-select hint: `music`, `voice`, `speech`, `tonal` |
-| `method` | auto | Explicit algorithm for the default export |
-| `formant` | `false` | Formant-preserving shift via default export |
+| `ratio` | `1` | Pitch shift ratio (1.5 = +7 semitones, 2 = +1 octave) |
+| `semitones` | from ratio | Pitch shift in semitones (alternative to `ratio`) |
 | `frameSize` | `2048` | Frame size in samples |
 | `hopSize` | `frameSize/4` | Hop between frames |
+
+Default export (`pitchShift`) additionally accepts:
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `content` | `music` | Auto-select hint: `music`, `voice`/`speech`, `tonal` |
+| `method` | auto | Force a specific algorithm by name |
+| `formant` | `false` | Wrap selected algorithm in formant preservation |
 
 Algorithm-specific:
 
