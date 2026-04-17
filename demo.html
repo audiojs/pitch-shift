@@ -204,9 +204,9 @@ h1{font:500 clamp(20px,2.5vw,26px)/1 var(--sans);letter-spacing:0.16em;text-tran
 <script type="importmap">
 {
   "imports": {
-    "fourier-transform": "./node_modules/fourier-transform/index.js",
-    "window-function": "./node_modules/window-function/index.js",
-    "time-stretch": "./node_modules/time-stretch/index.js",
+    "fourier-transform": "https://unpkg.com/fourier-transform@2/index.js",
+    "window-function": "https://unpkg.com/window-function@3/index.js",
+    "time-stretch": "https://unpkg.com/time-stretch@1/index.js",
     "pitch-shift": "./index.js"
   }
 }
@@ -282,7 +282,7 @@ const FIXTURES = {
 function semiToRatio(st) { return Math.pow(2, st / 12) }
 
 async function loadLena() {
-  let resp = await fetch('./node_modules/audio-lena/lena.mp3')
+  let resp = await fetch('https://unpkg.com/audio-lena@3/lena.mp3')
   let buf = await resp.arrayBuffer()
   let ctx = new OfflineAudioContext(1, SR * 13, SR)
   let abuf = await ctx.decodeAudioData(buf)

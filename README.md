@@ -1,4 +1,4 @@
-# pitch-shift
+# pitch-shift [![test](https://github.com/audiojs/pitch-shift/actions/workflows/test.yml/badge.svg)](https://github.com/audiojs/pitch-shift/actions/workflows/test.yml) [![npm](https://img.shields.io/npm/v/pitch-shift?color=white)](https://npmjs.org/pitch-shift) [![demo](https://img.shields.io/badge/demo-live-black)](https://audiojs.github.io/pitch-shift/demo)
 
 Canonical pitch-shifting algorithms in functional JavaScript. Frequency-domain algorithms (vocoder, phaseLock, transient, formant, sms, hpss) shift bins natively; time-domain algorithms (ola, wsola, psola, granular) apply their namesake stretcher from [time-stretch](https://github.com/audiojs/time-stretch) then anti-aliased sinc resample. Consistent unified API: batch, stream, multi-channel. Part of the audiojs ecosystem.
 
