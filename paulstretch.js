@@ -1,5 +1,5 @@
 import { stftBatch, stftStream } from './stft.js'
-import { makePitchShift, resolveRatio, PI2 } from './util.js'
+import { makeFrameRatio, makePitchShift, resolveRatio, PI2 } from './util.js'
 
 // Peak-match (not RMS-match) because the random-phase reconstruction is noise-like:
 // its sample distribution is approximately Gaussian with peaks at ~3× RMS. Matching RMS
@@ -21,14 +21,16 @@ function matchPeak(out, ref) {
 // producing the signature smooth, textural timbre — now shifted in pitch.
 
 function makeProcess(ratio) {
-  let ratioFn = typeof ratio === 'function' ? ratio : null
-  let scalar = ratioFn ? ratioFn(0) : ratio
+  let fr = makeFrameRatio(ratio)
   return function process(mag, phase, state, ctx) {
-    let { half, sampleRate, frameStart } = ctx
-    let ratio = ratioFn ? ratioFn(Math.max(0, frameStart) / sampleRate) : scalar
-    if (!Number.isFinite(ratio) || ratio <= 0) ratio = scalar || 1
-    let newMag = new Float64Array(half + 1)
-    let newPhase = new Float64Array(half + 1)
+    let { half } = ctx
+    let ratio = fr.at(ctx.frameStart, ctx.sampleRate)
+    if (!state.newMag) {
+      state.newMag = new Float64Array(half + 1)
+      state.newPhase = new Float64Array(half + 1)
+    }
+    let { newMag, newPhase } = state
+    newMag.fill(0)
     for (let k = 0; k <= half; k++) {
       let src = k / ratio
       if (src > half) continue

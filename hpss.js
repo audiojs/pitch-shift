@@ -1,5 +1,6 @@
 import { fft, ifft } from 'fourier-transform'
-import { PI2, hannWindow, matchGain, wrapPhase, makePitchShift, resolveRatio, bufferedStream } from './util.js'
+import { winSqFloor } from './stft.js'
+import { PI2, hannWindow, makeFrameRatio, matchGain, wrapPhase, makePitchShift, resolveRatio, bufferedStream } from './util.js'
 
 // Harmonic/Percussive Source Separation (Fitzgerald 2010) + per-component pitch shift.
 //
@@ -44,6 +45,7 @@ function hpssBatch(data, opts) {
   let win = hannWindow(N)
   let freqPerBin = PI2 / N
   let sr = opts?.sampleRate || 44100
+  let fr = makeFrameRatio(ratioFn || ratio)
 
   let pad = N
   let padded = new Float32Array(data.length + pad * 2)
@@ -115,8 +117,7 @@ function hpssBatch(data, opts) {
   let pShifted = new Uint8Array(half + 1)
 
   for (let f = 0; f < nFrames; f++) {
-    let r = ratioFn ? ratioFn(Math.max(0, f * hop - pad) / sr) : ratio
-    if (!Number.isFinite(r) || r <= 0) r = ratio || 1
+    let r = fr.at(f * hop - pad, sr)
     let mag = magM[f]
     let ph = phM[f]
     let mh = Mh[f]
@@ -209,11 +210,11 @@ function hpssBatch(data, opts) {
   }
 
   let result = new Float32Array(data.length)
-  let floor = 1e-3
+  let normFloor = winSqFloor(win, hop)
   for (let i = 0; i < data.length; i++) {
     let j = i + pad
-    let nrm = norm[j] < floor ? floor : norm[j]
-    result[i] = nrm > 1e-10 ? outPadded[j] / nrm : 0
+    let n = norm[j] < normFloor ? normFloor : norm[j]
+    result[i] = n > 1e-10 ? outPadded[j] / n : 0
   }
   return matchGain(result, data)
 }

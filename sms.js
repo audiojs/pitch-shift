@@ -1,5 +1,5 @@
 import { stftBatch, stftStream } from './stft.js'
-import { matchGain, wrapPhase, makePitchShift, resolveRatio } from './util.js'
+import { makeFrameRatio, matchGain, wrapPhase, makePitchShift, resolveRatio } from './util.js'
 
 // Spectral Modeling Synthesis (Serra/Smith) pitch shift.
 // Decomposes each frame into sinusoidal peaks (partials) + stochastic residual.
@@ -15,19 +15,20 @@ function parabolicInterpolate(mag, k) {
 }
 
 function makeProcess(ratio, maxTracks, minMag) {
-  let ratioFn = typeof ratio === 'function' ? ratio : null
-  let scalar = ratioFn ? ratioFn(0) : ratio
+  let fr = makeFrameRatio(ratio)
   return function process(mag, phase, state, ctx) {
-    let { half, hop, freqPerBin, sampleRate, frameStart } = ctx
-    let ratio = ratioFn ? ratioFn(Math.max(0, frameStart) / sampleRate) : scalar
-    if (!Number.isFinite(ratio) || ratio <= 0) ratio = scalar || 1
+    let { half, hop, freqPerBin } = ctx
+    let ratio = fr.at(ctx.frameStart, ctx.sampleRate)
     if (!state.prev) {
       state.prev = new Float64Array(half + 1)
       state.syn = new Float64Array(half + 1)
+      state.newMag = new Float64Array(half + 1)
+      state.newPhase = new Float64Array(half + 1)
+      state.residual = new Float64Array(half + 1)
+      state.owned = new Uint8Array(half + 1)
       state.first = true
     }
-    let prev = state.prev
-    let syn = state.syn
+    let { prev, syn, newMag, newPhase, residual, owned } = state
 
     let maxM = 0
     for (let k = 0; k <= half; k++) if (mag[k] > maxM) maxM = mag[k]
@@ -49,9 +50,7 @@ function makeProcess(ratio, maxTracks, minMag) {
     if (picked.length > maxTracks) picked.length = maxTracks
 
     // Residual = original magnitude with the peak lobes zeroed out so the remaining
-    // stochastic energy carries no partial content. Wider kernel than the additive
-    // subtraction used before, so residual is truly "what's left over".
-    let residual = new Float64Array(half + 1)
+    // stochastic energy carries no partial content.
     for (let k = 0; k <= half; k++) residual[k] = mag[k]
     let lobeW = 3
     for (let p of picked) {
@@ -63,12 +62,9 @@ function makeProcess(ratio, maxTracks, minMag) {
       }
     }
 
-    let newMag = new Float64Array(half + 1)
-    let newPhase = new Float64Array(half + 1)
-    // Track bins owned by partial lobes so the residual scatter doesn't overwrite their
-    // coherent phase with stochastic analysis phase (that mixture used to produce a DC
-    // click at every frame boundary — audible as 172 Hz amplitude modulation at hop=256).
-    let owned = new Uint8Array(half + 1)
+    newMag.fill(0)
+    newPhase.fill(0)
+    owned.fill(0)
 
     for (let p of picked) {
       let k0 = p.bin

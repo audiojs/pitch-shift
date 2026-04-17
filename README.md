@@ -34,7 +34,7 @@ Each algorithm is a canonical pitch-shift implementation with its own character.
 
 | Algorithm | Domain | Form | Best for |
 |-----------|--------|------|----------|
-| `ola` | Time | WSOLA time-stretch + sinc resample. The simplest stretch+resample pitch shift — the baseline the others improve on. | Baseline / general |
+| `ola` | Time | OLA time-stretch + sinc resample. Plain overlap-add without similarity search — the baseline the others improve on. | Baseline / general |
 | `vocoder` | STFT | Bin-shift phase vocoder (SMB/Bernsee). True instantaneous frequency per bin, loudest-wins scatter, synthesis phase accumulation. | Simple tonal material |
 | `phaseLock` | STFT | Laroche-Dolson peak-locked vocoder. Peaks get independent frequency shift; non-peak bins preserve phase offset relative to the nearest peak. | General music |
 | `transient` | STFT | Peak-locked vocoder with spectral-flux transient detection. On transient frames, synthesis phase resets to analysis phase, preserving attacks. | Music with percussion |
@@ -52,7 +52,7 @@ Each algorithm is a canonical pitch-shift implementation with its own character.
 
 Each algorithm preserves a different invariant and surrenders the rest. No single one wins everywhere — the reason to reach for one over another is what it keeps intact *by construction* and what it must give up for that. The guide below is what each canonical form trades.
 
-**`ola`** — WSOLA time-stretch + sinc resample. The simplest stretch+resample pitch shift — the baseline the others improve on. *Preserves* pitch accuracy, amplitude envelope, local waveform shape. *Destroys* formants (shifted by the resample), phase coherence across long spans, transients. *Reach for* a simple, reliable pitch shift when spectral fidelity is not critical.
+**`ola`** — OLA time-stretch + sinc resample. Plain overlap-add without similarity search — the baseline the others improve on. *Preserves* pitch accuracy, amplitude envelope. *Destroys* formants (shifted by the resample), phase coherence across long spans, transients (grain-rate phase cancellation). *Reach for* the simplest possible pitch shift, or as a reference to compare against.
 
 **`vocoder`** — SMB/Bernsee bin-shift. Recovers the true instantaneous frequency of each bin from the consecutive-frame phase advance, then re-accumulates synthesis phase at the shifted frequency. *Preserves* dominant-partial pitch and long-horizon phase for each bin independently. *Destroys* transients (smeared across the frame), vertical phase coherence between adjacent bins ("phasiness"), formants. *Reach for* simple tonal material and minimal correct spectral pitch shift.
 
@@ -132,9 +132,9 @@ Algorithm-specific options:
 
 - **`transient`**: `transientThreshold` (default: `1.5`) — z-score over log-flux EMA
 - **`psola`**: `sampleRate`, `minFreq` (default `70`), `maxFreq` (default `600`)
-- **`wsola`**: `tolerance` (default `max(4, hop/2)`) — similarity search radius
+- **`wsola`**: `tolerance` (default `frameSize/4`) — similarity search radius
 - **`formant`**: `envelopeWidth` (default `max(8, N/64)`) — cepstrum lifter cutoff
-- **`sms`**: `maxTracks` (default `80`), `minMag` (default `1e-4`)
+- **`sms`**: `maxTracks` (default `Infinity`), `minMag` (default `1e-4`)
 - **`hpss`**: `hpssTimeWidth` (default `17` frames), `hpssFreqWidth` (default `17` bins), `hpssPower` (default `2`) — median window sizes and soft-mask exponent
 - **`sample`**: `sincRadius` (default `8`) — windowed-sinc half-width in samples
 - **`hybrid`**: `hybridThreshold` (default `0.8`) — spectral-flux z-score threshold for full WSOLA blend

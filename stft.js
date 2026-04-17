@@ -35,7 +35,7 @@ function synth(r, sc, half) {
   return ifft(re, im)
 }
 
-function winSqFloor(win, hop) {
+export function winSqFloor(win, hop) {
   let N = win.length, min = Infinity
   for (let i = 0; i < hop; i++) {
     let s = 0

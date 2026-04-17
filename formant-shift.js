@@ -1,6 +1,6 @@
 import { fft, ifft } from 'fourier-transform'
 import { stftBatch, stftStream } from './stft.js'
-import { matchGain, wrapPhase, makePitchShift, resolveRatio } from './util.js'
+import { findPeaks, nearestPeak, makeFrameRatio, matchGain, wrapPhase, makePitchShift, resolveRatio } from './util.js'
 
 // Formant-preserving pitch shift. The spectral envelope is extracted via cepstral liftering
 // (low-quefrency coefficients) from the original frame. A peak-locked phase vocoder then
@@ -31,39 +31,11 @@ function cepstralEnvelope(mag, N, liftCutoff, preLog = false) {
   return env
 }
 
-function findPeaks(mag, half) {
-  // First-order comparison; ±2 shadows closely-spaced chord partials (see phase-lock.js).
-  let maxM = 0
-  for (let k = 0; k <= half; k++) if (mag[k] > maxM) maxM = mag[k]
-  let floor = Math.max(1e-8, maxM * 0.005)
-  let peaks = []
-  for (let k = 1; k < half; k++) {
-    let v = mag[k]
-    if (v < floor) continue
-    if (v > mag[k - 1] && v > mag[k + 1]) peaks.push(k)
-  }
-  return peaks
-}
-
-function assignedPeak(peaks, k) {
-  if (!peaks.length) return -1
-  let lo = 0, hi = peaks.length - 1
-  while (lo < hi) {
-    let mid = (lo + hi) >> 1
-    if (peaks[mid] < k) lo = mid + 1
-    else hi = mid
-  }
-  if (lo > 0 && Math.abs(peaks[lo - 1] - k) <= Math.abs(peaks[lo] - k)) return lo - 1
-  return lo
-}
-
 function makeProcess(ratio, envelopeWidth) {
-  let ratioFn = typeof ratio === 'function' ? ratio : null
-  let scalar = ratioFn ? ratioFn(0) : ratio
+  let fr = makeFrameRatio(ratio)
   return function process(mag, phase, state, ctx) {
-    let { N, half, hop, freqPerBin, sampleRate, frameStart } = ctx
-    let ratio = ratioFn ? ratioFn(Math.max(0, frameStart) / sampleRate) : scalar
-    if (!Number.isFinite(ratio) || ratio <= 0) ratio = scalar || 1
+    let { N, half, hop, freqPerBin } = ctx
+    let ratio = fr.at(ctx.frameStart, ctx.sampleRate)
     if (!state.prev) {
       state.prev = new Float64Array(half + 1)
       state.syn = new Float64Array(half + 1)
@@ -115,7 +87,7 @@ function makeProcess(ratio, envelopeWidth) {
     }
 
     for (let k = 0; k <= half; k++) {
-      let pi = assignedPeak(peaks, k)
+      let pi = nearestPeak(peaks, k)
       if (pi < 0) continue
       let pk = peaks[pi]
       let destBin = peakDest[pi]

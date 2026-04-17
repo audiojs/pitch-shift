@@ -77,7 +77,7 @@ function transientConfidence(data, opts) {
 }
 
 function hybridBatch(data, opts) {
-  resolvePitchParams(opts)
+  resolvePitchParams(opts) // validate early — wsola rejects variable ratio, catch it here with a clear message
   let pv = phaseLock(data, opts)
   let td = wsola(data, opts)
   let conf = transientConfidence(data, opts)

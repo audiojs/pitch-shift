@@ -1,17 +1,15 @@
 import { stftBatch, stftStream } from './stft.js'
-import { matchGain, wrapPhase, makePitchShift, resolveRatio } from './util.js'
+import { makeFrameRatio, matchGain, wrapPhase, makePitchShift, resolveRatio } from './util.js'
 
 // Canonical phase vocoder pitch shift (Bernsee / SMB method).
 // Per frame: compute true instantaneous frequency at each analysis bin, shift each bin's
 // contribution to a new bin position determined by that frequency × ratio, and accumulate
 // synthesis phase at the shifted frequency. No time-stretch, no resample.
 function makeProcess(ratio) {
-  let ratioFn = typeof ratio === 'function' ? ratio : null
-  let scalar = ratioFn ? ratioFn(0) : ratio
+  let fr = makeFrameRatio(ratio)
   return function process(mag, phase, state, ctx) {
-    let { half, hop, freqPerBin, sampleRate, frameStart } = ctx
-    let ratio = ratioFn ? ratioFn(Math.max(0, frameStart) / sampleRate) : scalar
-    if (!Number.isFinite(ratio) || ratio <= 0) ratio = scalar || 1
+    let { half, hop, freqPerBin } = ctx
+    let ratio = fr.at(ctx.frameStart, ctx.sampleRate)
     if (!state.prev) {
       state.prev = new Float64Array(half + 1)
       state.syn = new Float64Array(half + 1)

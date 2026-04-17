@@ -1,57 +1,33 @@
 import { stftBatch, stftStream } from './stft.js'
-import { matchGain, wrapPhase, makePitchShift, resolveRatio } from './util.js'
+import { findPeaks, nearestPeak, makeFrameRatio, matchGain, wrapPhase, makePitchShift, resolveRatio } from './util.js'
 
 // Transient-aware phase vocoder pitch shift.
 // On detected transient frames, phase is reset to the analysis phase (vertical coherence is
 // preferred over horizontal on these frames), which keeps attacks sharp. Between transients
 // it behaves like a peak-locked vocoder.
 
-function findPeaks(mag, half) {
-  // First-order comparison; ±2 shadows closely-spaced chord partials (see phase-lock.js).
-  let maxM = 0
-  for (let k = 0; k <= half; k++) if (mag[k] > maxM) maxM = mag[k]
-  let floor = Math.max(1e-8, maxM * 0.005)
-  let peaks = []
-  for (let k = 1; k < half; k++) {
-    let v = mag[k]
-    if (v < floor) continue
-    if (v > mag[k - 1] && v > mag[k + 1]) peaks.push(k)
-  }
-  return peaks
-}
-
-function nearestPeak(peaks, k) {
-  if (!peaks.length) return -1
-  let lo = 0, hi = peaks.length - 1
-  while (lo < hi) {
-    let mid = (lo + hi) >> 1
-    if (peaks[mid] < k) lo = mid + 1
-    else hi = mid
-  }
-  if (lo > 0 && Math.abs(peaks[lo - 1] - k) <= Math.abs(peaks[lo] - k)) return lo - 1
-  return lo
-}
-
 function makeProcess(ratio, threshold) {
-  let ratioFn = typeof ratio === 'function' ? ratio : null
-  let scalar = ratioFn ? ratioFn(0) : ratio
+  let fr = makeFrameRatio(ratio)
   return function process(mag, phase, state, ctx) {
-    let { half, hop, freqPerBin, sampleRate, frameStart } = ctx
-    let ratio = ratioFn ? ratioFn(Math.max(0, frameStart) / sampleRate) : scalar
-    if (!Number.isFinite(ratio) || ratio <= 0) ratio = scalar || 1
+    let { half, hop, freqPerBin } = ctx
+    let ratio = fr.at(ctx.frameStart, ctx.sampleRate)
     if (!state.prev) {
       state.prev = new Float64Array(half + 1)
       state.prevMag = new Float64Array(half + 1)
       state.syn = new Float64Array(half + 1)
+      state.newMag = new Float64Array(half + 1)
+      state.newPhase = new Float64Array(half + 1)
+      state.peakDest = new Int32Array(half)
+      state.peakSynPhase = new Float64Array(half)
       state.fluxMean = 0
       state.fluxVar = 0
       state.frames = 0
       state.first = true
     }
 
-    let prev = state.prev
-    let prevMag = state.prevMag
-    let syn = state.syn
+    let { prev, prevMag, syn, newMag, newPhase, peakDest, peakSynPhase } = state
+    newMag.fill(0)
+    newPhase.fill(0)
 
     // Spectral flux (Hf difference, positive only, log-compressed).
     let flux = 0, energy = 0
@@ -77,12 +53,7 @@ function makeProcess(ratio, threshold) {
     state.fluxVar = (1 - alpha) * (state.fluxVar + alpha * delta * delta)
 
     let peaks = findPeaks(mag, half)
-    let newMag = new Float64Array(half + 1)
-    let newPhase = new Float64Array(half + 1)
 
-    // Peak shift + phase accumulation.
-    let peakDest = new Int32Array(peaks.length)
-    let peakSynPhase = new Float64Array(peaks.length)
     for (let i = 0; i < peaks.length; i++) {
       let k = peaks[i]
       let trueFreq
@@ -95,7 +66,6 @@ function makeProcess(ratio, threshold) {
       let shifted = trueFreq * ratio
       let destBin = Math.round(shifted / freqPerBin)
       if (destBin < 0 || destBin > half) { peakDest[i] = -1; continue }
-      // On transient frames, lock synthesis phase to analysis phase — keeps attacks coherent.
       let newSyn = isTransient ? phase[k] : wrapPhase(syn[k] + shifted * hop)
       peakDest[i] = destBin
       peakSynPhase[i] = newSyn

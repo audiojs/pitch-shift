@@ -221,6 +221,50 @@ export function createChannelWriter(factory) {
   }
 }
 
+// First-order local magnitude peaks above a fraction of the frame's peak.
+// ±1 comparison keeps closely-spaced chord partials whose mainlobes overlap.
+export function findPeaks(mag, half) {
+  let maxM = 0
+  for (let k = 0; k <= half; k++) if (mag[k] > maxM) maxM = mag[k]
+  let floor = Math.max(1e-8, maxM * 0.005)
+  let peaks = []
+  for (let k = 1; k < half; k++) {
+    let v = mag[k]
+    if (v < floor) continue
+    if (v > mag[k - 1] && v > mag[k + 1]) peaks.push(k)
+  }
+  return peaks
+}
+
+// Binary-search nearest peak index for bin k.
+export function nearestPeak(peaks, k) {
+  if (!peaks.length) return -1
+  let lo = 0, hi = peaks.length - 1
+  while (lo < hi) {
+    let mid = (lo + hi) >> 1
+    if (peaks[mid] < k) lo = mid + 1
+    else hi = mid
+  }
+  if (lo > 0 && Math.abs(peaks[lo - 1] - k) <= Math.abs(peaks[lo] - k)) return lo - 1
+  return lo
+}
+
+// Variable-ratio resolver for STFT process callbacks. Returns `{ scalar, at }`
+// where `scalar` is the ratio at t=0 and `at(frameStart, sampleRate)` resolves
+// the ratio for a given frame position. Replaces the 4-line boilerplate that was
+// duplicated in every makeProcess function.
+export function makeFrameRatio(ratio) {
+  if (typeof ratio !== 'function') return { scalar: ratio, at: () => ratio }
+  let scalar = ratio(0)
+  return {
+    scalar,
+    at(frameStart, sampleRate) {
+      let r = ratio(Math.max(0, frameStart) / sampleRate)
+      return (!Number.isFinite(r) || r <= 0) ? (scalar || 1) : r
+    }
+  }
+}
+
 export function makePitchShift(batch, stream) {
   let isVariable = (opts) => {
     let raw = opts?.ratio
@@ -244,4 +288,3 @@ export function makePitchShift(batch, stream) {
     return createChannelWriter(() => stream(opts))
   }
 }
-

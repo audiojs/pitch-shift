@@ -1,6 +1,6 @@
 import {
   createChannelWriter, isChannelArray, mapInput, normalizeOptionsInput,
-  passThroughWriter, resolvePitchParams,
+  passThroughWriter, resolveRatio,
 } from './util.js'
 import formant from './formant-shift.js'
 import ola from './ola.js'
@@ -12,6 +12,9 @@ import wsola from './wsola.js'
 import granular from './granular.js'
 import paulstretch from './paulstretch.js'
 import sms from './sms.js'
+import hpss from './hpss.js'
+import sample from './sample.js'
+import hybrid from './hybrid.js'
 
 function selectMethod(opts) {
   if (typeof opts?.method === 'function') {
@@ -23,11 +26,15 @@ function selectMethod(opts) {
     case 'phase-lock':
     case 'phaseLock': return { fn: phaseLock, name: 'phaseLock', reason: 'explicit-method' }
     case 'transient': return { fn: transient, name: 'transient', reason: 'explicit-method' }
+    case 'formant': return { fn: formant, name: 'formant', reason: 'explicit-method' }
     case 'psola': return { fn: psola, name: 'psola', reason: 'explicit-method' }
     case 'wsola': return { fn: wsola, name: 'wsola', reason: 'explicit-method' }
     case 'granular': return { fn: granular, name: 'granular', reason: 'explicit-method' }
     case 'paulstretch': return { fn: paulstretch, name: 'paulstretch', reason: 'explicit-method' }
     case 'sms': return { fn: sms, name: 'sms', reason: 'explicit-method' }
+    case 'hpss': return { fn: hpss, name: 'hpss', reason: 'explicit-method' }
+    case 'sample': return { fn: sample, name: 'sample', reason: 'explicit-method' }
+    case 'hybrid': return { fn: hybrid, name: 'hybrid', reason: 'explicit-method' }
   }
   switch (opts?.content) {
     case 'voice':
@@ -50,24 +57,24 @@ function notifyDecision(opts, params, decision) {
 }
 
 function shiftAuto(data, opts) {
-  let params = resolvePitchParams(opts)
+  let { ratio } = resolveRatio(opts)
   if (opts?.formant) {
-    notifyDecision(opts, params, { name: 'formant', reason: 'formant:true' })
+    notifyDecision(opts, { ratio, semitones: opts?.semitones ?? 0 }, { name: 'formant', reason: 'formant:true' })
     return formant(data, opts)
   }
   let decision = selectMethod(opts)
-  notifyDecision(opts, params, decision)
+  notifyDecision(opts, { ratio, semitones: opts?.semitones ?? 0 }, decision)
   return decision.fn(data, opts)
 }
 
 function createWriter(opts) {
-  let params = resolvePitchParams(opts)
+  let { ratio } = resolveRatio(opts)
   if (opts?.formant) {
-    notifyDecision(opts, params, { name: 'formant', reason: 'formant:true' })
+    notifyDecision(opts, { ratio, semitones: opts?.semitones ?? 0 }, { name: 'formant', reason: 'formant:true' })
     return formant(opts)
   }
   let decision = selectMethod(opts)
-  notifyDecision(opts, params, decision)
+  notifyDecision(opts, { ratio, semitones: opts?.semitones ?? 0 }, decision)
   let writer = decision.fn(opts)
   if (typeof writer !== 'function') {
     throw new TypeError('pitchShift: selected streaming method must return a writer')
@@ -80,7 +87,7 @@ export default function pitchShift(data, opts) {
     return mapInput(data, shiftAuto, opts)
   }
   opts = normalizeOptionsInput(data)
-  let { ratio } = resolvePitchParams(opts)
+  let { ratio } = resolveRatio(opts)
   if (ratio === 1) return createChannelWriter(() => passThroughWriter())
   return createChannelWriter(() => createWriter(opts))
 }
