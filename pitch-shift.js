@@ -1,20 +1,20 @@
 import {
   createChannelWriter, isChannelArray, mapInput, normalizeOptionsInput,
   passThroughWriter, resolveRatio,
-} from './util.js'
-import formant from './formant-shift.js'
-import ola from './ola.js'
-import vocoder from './vocoder.js'
-import phaseLock from './phase-lock.js'
-import transient from './transient.js'
-import psola from './psola.js'
-import wsola from './wsola.js'
-import granular from './granular.js'
-import paulstretch from './paulstretch.js'
-import sms from './sms.js'
-import hpss from './hpss.js'
-import sample from './sample.js'
-import hybrid from './hybrid.js'
+} from '@audio/shift-core'
+import formant from '@audio/shift-formant'
+import ola from '@audio/shift-ola'
+import vocoder from '@audio/shift-pvoc'
+import phaseLock from '@audio/shift-pvoc-lock'
+import transient from '@audio/shift-transient'
+import psola from '@audio/shift-psola'
+import wsola from '@audio/shift-wsola'
+import granular from '@audio/shift-granular'
+import paulstretch from '@audio/shift-paulstretch'
+import sms from '@audio/shift-sms'
+import hpss from '@audio/shift-hpss'
+import sample from '@audio/shift-sample'
+import hybrid from '@audio/shift-hybrid'
 
 function selectMethod(opts) {
   if (typeof opts?.method === 'function') {

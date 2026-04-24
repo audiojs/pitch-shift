@@ -1,5 +1,5 @@
-import { stftBatch, stftStream } from './stft.js'
-import { findPeaks, nearestPeak, makeFrameRatio, matchGain, wrapPhase, makePitchShift, resolveRatio } from './util.js'
+import { stftBatch, stftStream } from '@audio/shift-core/stft'
+import { findPeaks, nearestPeak, makeFrameRatio, matchGain, wrapPhase, makePitchShift, resolveRatio } from '@audio/shift-core'
 
 // Peak-locked phase vocoder (Laroche-Dolson style, adapted to direct bin-shift pitch shifting).
 // Phase coherence across a region of influence is preserved by locking non-peak bins' phase

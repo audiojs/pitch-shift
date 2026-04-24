@@ -1,0 +1,41 @@
+{
+  "name": "@audio/shift-pvoc",
+  "version": "1.0.0",
+  "description": "Canonical phase vocoder (Bernsee/SMB) pitch shift",
+  "type": "module",
+  "sideEffects": false,
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@audio/shift-core": "^1.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "author": "audiojs",
+  "homepage": "https://github.com/audiojs/pitch-shift/tree/main/packages/shift-pvoc#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/audiojs/pitch-shift.git",
+    "directory": "packages/shift-pvoc"
+  },
+  "keywords": [
+    "audio",
+    "pitch-shift",
+    "phase-vocoder",
+    "pvoc",
+    "stft",
+    "dsp"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

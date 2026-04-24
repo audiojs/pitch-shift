@@ -1,0 +1,41 @@
+{
+  "name": "@audio/shift-paulstretch",
+  "version": "1.0.0",
+  "description": "Paulstretch-style randomized-phase pitch shift for textural blur",
+  "type": "module",
+  "sideEffects": false,
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@audio/shift-core": "^1.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "author": "audiojs",
+  "homepage": "https://github.com/audiojs/pitch-shift/tree/main/packages/shift-paulstretch#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/audiojs/pitch-shift.git",
+    "directory": "packages/shift-paulstretch"
+  },
+  "keywords": [
+    "audio",
+    "pitch-shift",
+    "paulstretch",
+    "texture",
+    "drone",
+    "dsp"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

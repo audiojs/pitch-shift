@@ -1,5 +1,5 @@
 import { psola as stretch } from 'time-stretch'
-import { bufferedStream, makePitchShift, resampleTo, resolvePitchParams } from './util.js'
+import { bufferedStream, makePitchShift, resampleTo, resolvePitchParams } from '@audio/shift-core'
 
 // Canonical Pitch-Synchronous Overlap-Add pitch shift (Moulines-Charpentier 1990).
 // PSOLA time-stretch at `factor = ratio` — autocorrelation period contour → pitch marks

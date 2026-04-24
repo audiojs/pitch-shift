@@ -1,0 +1,41 @@
+{
+  "name": "@audio/shift-transient",
+  "version": "1.0.0",
+  "description": "Transient-aware phase vocoder pitch shift with attack preservation",
+  "type": "module",
+  "sideEffects": false,
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@audio/shift-core": "^1.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "author": "audiojs",
+  "homepage": "https://github.com/audiojs/pitch-shift/tree/main/packages/shift-transient#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/audiojs/pitch-shift.git",
+    "directory": "packages/shift-transient"
+  },
+  "keywords": [
+    "audio",
+    "pitch-shift",
+    "transient",
+    "phase-vocoder",
+    "attack",
+    "dsp"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

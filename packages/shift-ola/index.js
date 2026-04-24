@@ -1,5 +1,5 @@
 import { wsola as stretch } from 'time-stretch'
-import { bufferedStream, makePitchShift, resampleTo, resolvePitchParams } from './util.js'
+import { bufferedStream, makePitchShift, resampleTo, resolvePitchParams } from '@audio/shift-core'
 
 // Overlap-Add pitch shift (Flanagan-Golden 1966). Plain OLA time-stretch at `factor =
 // ratio` — no similarity search (delta=0), so grains are placed at nominal analysis

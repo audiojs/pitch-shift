@@ -1,6 +1,6 @@
 import { fft, ifft } from 'fourier-transform'
-import { stftBatch, stftStream } from './stft.js'
-import { findPeaks, nearestPeak, makeFrameRatio, matchGain, wrapPhase, makePitchShift, resolveRatio } from './util.js'
+import { stftBatch, stftStream } from '@audio/shift-core/stft'
+import { findPeaks, nearestPeak, makeFrameRatio, matchGain, wrapPhase, makePitchShift, resolveRatio } from '@audio/shift-core'
 
 // Formant-preserving pitch shift. The spectral envelope is extracted via cepstral liftering
 // (low-quefrency coefficients) from the original frame. A peak-locked phase vocoder then

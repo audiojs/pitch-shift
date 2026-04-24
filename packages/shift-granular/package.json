@@ -1,0 +1,41 @@
+{
+  "name": "@audio/shift-granular",
+  "version": "1.0.0",
+  "description": "Granular pitch shift — small-grain OLA for signature textural sound",
+  "type": "module",
+  "sideEffects": false,
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@audio/shift-core": "^1.0.0",
+    "time-stretch": "^1.2.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "author": "audiojs",
+  "homepage": "https://github.com/audiojs/pitch-shift/tree/main/packages/shift-granular#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/audiojs/pitch-shift.git",
+    "directory": "packages/shift-granular"
+  },
+  "keywords": [
+    "audio",
+    "pitch-shift",
+    "granular",
+    "texture",
+    "dsp"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

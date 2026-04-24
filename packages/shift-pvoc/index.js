@@ -1,5 +1,5 @@
-import { stftBatch, stftStream } from './stft.js'
-import { makeFrameRatio, matchGain, wrapPhase, makePitchShift, resolveRatio } from './util.js'
+import { stftBatch, stftStream } from '@audio/shift-core/stft'
+import { makeFrameRatio, matchGain, wrapPhase, makePitchShift, resolveRatio } from '@audio/shift-core'
 
 // Canonical phase vocoder pitch shift (Bernsee / SMB method).
 // Per frame: compute true instantaneous frequency at each analysis bin, shift each bin's

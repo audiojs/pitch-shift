@@ -1,5 +1,5 @@
-import { stftBatch, stftStream } from './stft.js'
-import { makeFrameRatio, matchGain, wrapPhase, makePitchShift, resolveRatio } from './util.js'
+import { stftBatch, stftStream } from '@audio/shift-core/stft'
+import { makeFrameRatio, matchGain, wrapPhase, makePitchShift, resolveRatio } from '@audio/shift-core'
 
 // Spectral Modeling Synthesis (Serra/Smith) pitch shift.
 // Decomposes each frame into sinusoidal peaks (partials) + stochastic residual.

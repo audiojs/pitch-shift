@@ -1,0 +1,44 @@
+{
+  "name": "@audio/shift-core",
+  "version": "1.0.0",
+  "description": "Shared utilities for @audio/shift-* atoms: ratio resolution, channel writer, buffered stream, gain match, sinc resample, frame-ratio helper",
+  "type": "module",
+  "sideEffects": false,
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": "./index.js",
+    "./stft": "./stft.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "stft.js",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "fourier-transform": "^2.3.0",
+    "window-function": "^3.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "author": "audiojs",
+  "homepage": "https://github.com/audiojs/pitch-shift/tree/main/packages/shift-core#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/audiojs/pitch-shift.git",
+    "directory": "packages/shift-core"
+  },
+  "keywords": [
+    "audio",
+    "pitch-shift",
+    "dsp",
+    "utilities"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,5 +1,5 @@
-import { stftBatch, stftStream } from './stft.js'
-import { findPeaks, nearestPeak, makeFrameRatio, matchGain, wrapPhase, makePitchShift, resolveRatio } from './util.js'
+import { stftBatch, stftStream } from '@audio/shift-core/stft'
+import { findPeaks, nearestPeak, makeFrameRatio, matchGain, wrapPhase, makePitchShift, resolveRatio } from '@audio/shift-core'
 
 // Transient-aware phase vocoder pitch shift.
 // On detected transient frames, phase is reset to the analysis phase (vertical coherence is

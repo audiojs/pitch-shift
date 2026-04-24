@@ -1,33 +1,23 @@
 {
-  "name": "pitch-shift",
   "version": "1.0.0",
+  "name": "@audio/shift",
   "type": "module",
   "types": "index.d.ts",
   "description": "Canonical pitch-shifting algorithms: phase vocoder, peak-locked, transient-aware, PSOLA, WSOLA, granular, PaulStretch, SMS, HPSS, formant, sampler, hybrid",
   "sideEffects": false,
+  "main": "index.js",
   "exports": {
-    ".": "./index.js"
+    ".": "./index.js",
+    "./package.json": "./package.json"
   },
   "files": [
     "license.md",
     "index.js",
     "index.d.ts",
-    "util.js",
-    "stft.js",
-    "ola.js",
-    "vocoder.js",
-    "phase-lock.js",
-    "transient.js",
-    "psola.js",
-    "wsola.js",
-    "granular.js",
-    "paulstretch.js",
-    "sms.js",
-    "hpss.js",
-    "sample.js",
-    "hybrid.js",
-    "formant-shift.js",
     "pitch-shift.js"
+  ],
+  "workspaces": [
+    "packages/*"
   ],
   "scripts": {
     "test": "node test.js",
@@ -71,9 +61,22 @@
     "node": ">=18"
   },
   "dependencies": {
-    "fourier-transform": "^2.0.0",
-    "time-stretch": "^1.2.1",
-    "window-function": "^3.0.0"
+    "@audio/shift-core": "*",
+    "@audio/shift-formant": "*",
+    "@audio/shift-granular": "*",
+    "@audio/shift-hpss": "*",
+    "@audio/shift-hybrid": "*",
+    "@audio/shift-ola": "*",
+    "@audio/shift-paulstretch": "*",
+    "@audio/shift-psola": "*",
+    "@audio/shift-pvoc": "*",
+    "@audio/shift-pvoc-lock": "*",
+    "@audio/shift-sample": "*",
+    "@audio/shift-sms": "*",
+    "@audio/shift-transient": "*",
+    "@audio/shift-wsola": "*",
+    "fourier-transform": "^2.3.0",
+    "time-stretch": "^1.2.1"
   },
   "devDependencies": {
     "audio-lena": "^3.0.0",

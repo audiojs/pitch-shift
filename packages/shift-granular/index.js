@@ -1,5 +1,5 @@
 import { wsola as stretch } from 'time-stretch'
-import { bufferedStream, makePitchShift, resampleTo, resolvePitchParams } from './util.js'
+import { bufferedStream, makePitchShift, resampleTo, resolvePitchParams } from '@audio/shift-core'
 
 // Granular pitch shift. Same stretch+resample form as `ola` — WSOLA time-stretch with
 // similarity search followed by anti-aliased sinc resample — but with small grains

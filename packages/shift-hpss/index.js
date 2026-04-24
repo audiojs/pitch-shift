@@ -1,6 +1,6 @@
 import { fft, ifft } from 'fourier-transform'
-import { winSqFloor } from './stft.js'
-import { PI2, hannWindow, makeFrameRatio, matchGain, wrapPhase, makePitchShift, resolveRatio, bufferedStream } from './util.js'
+import { winSqFloor } from '@audio/shift-core/stft'
+import { PI2, hannWindow, makeFrameRatio, matchGain, wrapPhase, makePitchShift, resolveRatio, bufferedStream } from '@audio/shift-core'
 
 // Harmonic/Percussive Source Separation (Fitzgerald 2010) + per-component pitch shift.
 //
