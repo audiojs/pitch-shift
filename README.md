@@ -1,5 +1,7 @@
 # @audio/shift [![test](https://github.com/audiojs/shift/actions/workflows/test.yml/badge.svg)](https://github.com/audiojs/shift/actions/workflows/test.yml) [![npm](https://img.shields.io/npm/v/@audio/shift?color=white)](https://www.npmjs.com/package/@audio/shift) [![demo](https://img.shields.io/badge/demo-live-black)](https://audiojs.github.io/pitch-shift/demo)
 
+Try it in the browser: [Pitch and tempo changer](https://audiojs.dev/util/pitch-tempo/). Runs on this package, nothing is uploaded.
+
 Canonical pitch-shifting algorithms in functional JavaScript.<br>
 _Frequency-domain_: vocoder, phaseLock, transient, formant, sms, hpss.<br>
 _Time-domain_: ola, wsola, psola, granular, sample, delay.<br>
